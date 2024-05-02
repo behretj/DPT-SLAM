@@ -62,6 +62,8 @@ if __name__ == '__main__':
     parser.add_argument("--backend_nms", type=int, default=3)
 
     args = parser.parse_args()
+    ### is required, but somehow not passed without adding next line (TODO: check if really needed)
+    args.upsample = True
     torch.multiprocessing.set_start_method('spawn')
 
     from data_readers.tartan import test_split
@@ -72,6 +74,9 @@ if __name__ == '__main__':
 
     if args.id >= 0:
         test_split = [ test_split[args.id] ]
+    
+    ### overwrite test split, one scene for now (TODO: change in the end)
+    test_split = ["P001"]
 
     ate_list = []
     for scene in test_split:

@@ -60,6 +60,7 @@ class MotionFilter:
         if self.video.counter.value == 0:
             net, inp = self.__context_encoder(inputs[:,[0]])
             self.net, self.inp, self.fmap = net, inp, gmap
+            #### TODO: Here we could add the cotracker online function (first frame)
             self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 8.0, gmap, net[0,0], inp[0,0])
 
         ### only add new frame if there is enough motion ###
@@ -76,6 +77,7 @@ class MotionFilter:
                 self.count = 0
                 net, inp = self.__context_encoder(inputs[:,[0]])
                 self.net, self.inp, self.fmap = net, inp, gmap
+                #### TODO: Here we could add the cotracker online function (every other frame)
                 self.video.append(tstamp, image[0], None, None, depth, intrinsics / 8.0, gmap, net[0], inp[0])
 
             else:

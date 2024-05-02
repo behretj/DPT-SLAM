@@ -120,6 +120,7 @@ class FactorGraph:
             self.inp = inp if self.inp is None else torch.cat([self.inp, inp], 1)
 
         with torch.cuda.amp.autocast(enabled=False):
+            #### TODO: Here we can set the initial target to be the meaningful initialization for the flow
             target, _ = self.video.reproject(ii, jj)
             weight = torch.zeros_like(target)
 
