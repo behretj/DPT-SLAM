@@ -4,3 +4,6 @@
 [submodule "thirdparty/eigen"]
 	path = thirdparty/eigen
 	url = https://gitlab.com/libeigen/eigen.git
+[submodule "thirdparty/DOT"]
+	path = thirdparty/DOT
+	url = git@github.com:behretj/DOT.git
