@@ -12,9 +12,9 @@
 
 . /etc/profile.d/modules.sh
 module load cuda/12.1
-# export CUB_HOME=/cluster/courses/3dv/data/team-4/DOT-SLAM/thirdparty/dot/dot/utils/torch3d/cub-2.1.0
-# echo $CUB_HOME
-# export CXXFLAGS="-std=c++17"
+export CUB_HOME=/cluster/courses/3dv/data/team-4/DOT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
+echo $CUB_HOME
+export CXXFLAGS="-std=c++17"
 
 
 echo "working"

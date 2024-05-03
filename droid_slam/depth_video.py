@@ -11,7 +11,10 @@ import geom.projective_ops as pops
 
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=1024, stereo=False, device="cuda:0"):
-                
+
+        # CoTracker for the Video
+        # self.cotracker = CoTrackerOnlineModel() ### TODO: do initializing here
+
         # current keyframe count
         self.counter = Value('i', 0)
         self.ready = Value('i', 0)

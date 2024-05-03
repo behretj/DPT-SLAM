@@ -121,6 +121,12 @@ class FactorGraph:
 
         with torch.cuda.amp.autocast(enabled=False):
             #### TODO: Here we can set the initial target to be the meaningful initialization for the flow
+            #### target = coords0 + optical flow     (coords0 = [(0,0), (0,1), (0,2), ...]
+            ####                                                 (1,0), (1,1), (1,2), ...]])
+            ## compute refined optical flow from ii -> jj using:
+            ## - tracks from self.video.cotracker
+            ## - interpolation from DOT
+            ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             target, _ = self.video.reproject(ii, jj)
             weight = torch.zeros_like(target)
 
@@ -202,6 +208,7 @@ class FactorGraph:
         # motion features
         with torch.cuda.amp.autocast(enabled=False):
             coords1, mask = self.video.reproject(self.ii, self.jj)
+            ### motn = torch.cat([self.target - self.coords0, coords1 - self.target], dim=-1)
             motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
             motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
         
