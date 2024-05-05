@@ -136,30 +136,7 @@ class FactorGraph:
             track = torch.ones((1, 10, 64, 3)) # TODO: get track from online CoTracker
             video = torch.rand((50, 3, 512, 512)) # TODO, maybe reshape the video first before passing it to the refinement
 
-            # data = self.video.images[:50]
-            # print('data.shape', data.shape)
-            # track = self.point_tracker(data, mode="tracks_at_motion_boundaries")["tracks"]
-            # track = torch.stack([track[..., 0] / (w - 1), track[..., 1] / (h - 1), track[..., 2]], dim=-1)[None]
-            # pred = self.dot(data = {
-            #     'track': track,
-            #     'video': 
-            # })
-            # init.shape torch.Size([1, 10, 64, 3])
-            # track = torch.ones((1, 10, 64, 3))#.cuda()
-            
-            # print('ii:', ii)
-            # print('ii.shape:', ii.shape)
-            # # ii.shape: torch.Size([60])
-            # print('jj:', jj)
-            # print('jj.shape:', jj.shape)
-            # # jj.shape: torch.Size([60])
-            # print('video.images', self.video.images.shape)
-            # video.images torch.Size([1000, 3, 384, 512])
-            target = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
-            # target, _ = self.video.reproject(ii, jj) ###########
-            # print('target.shape', target.shape)
-            # target.shape torch.Size([1, 60, 48, 64, 2])
-            weight = torch.zeros_like(target) ########### TODO
+            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
