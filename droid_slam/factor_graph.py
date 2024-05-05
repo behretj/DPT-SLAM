@@ -7,6 +7,7 @@ from lietorch import SE3
 from modules.corr import CorrBlock, AltCorrBlock
 import geom.projective_ops as pops
 
+from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
 
 class FactorGraph:
     def __init__(self, video, update_op, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
@@ -40,6 +41,10 @@ class FactorGraph:
 
         self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
         self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+
+        self.optical_flow_refiner = OpticalFlow(height=512, width=512, 
+                                                config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json', 
+                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth')
 
     def __filter_repeated_edges(self, ii, jj):
         """ remove duplicate edges """
@@ -127,8 +132,34 @@ class FactorGraph:
             ## - tracks from self.video.cotracker
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
-            target, _ = self.video.reproject(ii, jj)
-            weight = torch.zeros_like(target)
+            
+            track = torch.ones((1, 10, 64, 3)) # TODO: get track from online CoTracker
+            video = torch.rand((50, 3, 512, 512)) # TODO, maybe reshape the video first before passing it to the refinement
+
+            # data = self.video.images[:50]
+            # print('data.shape', data.shape)
+            # track = self.point_tracker(data, mode="tracks_at_motion_boundaries")["tracks"]
+            # track = torch.stack([track[..., 0] / (w - 1), track[..., 1] / (h - 1), track[..., 2]], dim=-1)[None]
+            # pred = self.dot(data = {
+            #     'track': track,
+            #     'video': 
+            # })
+            # init.shape torch.Size([1, 10, 64, 3])
+            # track = torch.ones((1, 10, 64, 3))#.cuda()
+            
+            # print('ii:', ii)
+            # print('ii.shape:', ii.shape)
+            # # ii.shape: torch.Size([60])
+            # print('jj:', jj)
+            # print('jj.shape:', jj.shape)
+            # # jj.shape: torch.Size([60])
+            # print('video.images', self.video.images.shape)
+            # video.images torch.Size([1000, 3, 384, 512])
+            target = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
+            # target, _ = self.video.reproject(ii, jj) ###########
+            # print('target.shape', target.shape)
+            # target.shape torch.Size([1, 60, 48, 64, 2])
+            weight = torch.zeros_like(target) ########### TODO
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
