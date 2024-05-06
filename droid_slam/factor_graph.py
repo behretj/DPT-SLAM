@@ -134,7 +134,7 @@ class FactorGraph:
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             
             track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
-            video = torch.rand((50, 3, 512, 512)).cuda() # TODO, maybe reshape the video first before passing it to the refinement
+            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
             # data = self.video.images[:50]
             # print('data.shape', data.shape)
@@ -146,18 +146,19 @@ class FactorGraph:
             # })
             # init.shape torch.Size([1, 10, 64, 3])
             # track = torch.ones((1, 10, 64, 3))#.cuda()
+
+            tstamps_list = (self.video.tstamp).tolist()
+            ii_list = (ii).tolist()
+            jj_list = (jj).tolist()
+
+            sources_list = [int(tstamps_list[i]) for i in ii_list]
+            targets_list = [int(tstamps_list[i]) for i in jj_list]
             
-            # print('ii:', ii)
-            # print('ii.shape:', ii.shape)
             # # ii.shape: torch.Size([60])
-            # print('jj:', jj)
-            # print('jj.shape:', jj.shape)
             # # jj.shape: torch.Size([60])
-            # print('video.images', self.video.images.shape)
             # video.images torch.Size([1000, 3, 384, 512])
-            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
+            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
             # target, _ = self.video.reproject(ii, jj) ###########
-            # print('target.shape', target.shape)
             # target.shape torch.Size([1, 60, 48, 64, 2])
             # weight = torch.zeros_like(target) ########### TODO
 
