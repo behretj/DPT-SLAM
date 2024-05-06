@@ -44,7 +44,7 @@ class FactorGraph:
 
         self.optical_flow_refiner = OpticalFlow(height=512, width=512, 
                                                 config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json', 
-                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth')
+                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
 
     def __filter_repeated_edges(self, ii, jj):
         """ remove duplicate edges """
@@ -133,8 +133,8 @@ class FactorGraph:
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             
-            track = torch.ones((1, 10, 64, 3)) # TODO: get track from online CoTracker
-            video = torch.rand((50, 3, 512, 512)) # TODO, maybe reshape the video first before passing it to the refinement
+            track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
+            video = torch.rand((50, 3, 512, 512)).cuda() # TODO, maybe reshape the video first before passing it to the refinement
 
             # data = self.video.images[:50]
             # print('data.shape', data.shape)
@@ -155,11 +155,11 @@ class FactorGraph:
             # # jj.shape: torch.Size([60])
             # print('video.images', self.video.images.shape)
             # video.images torch.Size([1000, 3, 384, 512])
-            target = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
+            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=ii, jj=jj)
             # target, _ = self.video.reproject(ii, jj) ###########
             # print('target.shape', target.shape)
             # target.shape torch.Size([1, 60, 48, 64, 2])
-            weight = torch.zeros_like(target) ########### TODO
+            # weight = torch.zeros_like(target) ########### TODO
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
