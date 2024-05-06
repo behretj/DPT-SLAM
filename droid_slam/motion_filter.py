@@ -7,12 +7,17 @@ from droid_net import DroidNet
 
 import geom.projective_ops as pops
 from modules.corr import CorrBlock
+from thirdparty.DOT.dot.models.point_tracking import PointTracker
 
 
 class MotionFilter:
     """ This class is used to filter incoming frames and extract features """
 
-    def __init__(self, net, video, thresh=2.5, device="cuda:0"):
+    def __init__(self, net, video, thresh=2.5, device="cuda:0",
+                    tracker_config="configs/cotracker2_patch_4_wind_8.json",
+                    tracker_path="checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
+                    estimator_config="configs/raft_patch_8.json",
+                    estimator_path="checkpoints/cvo_raft_patch_8.pth"):
         
         # split net modules
         self.cnet = net.cnet
@@ -28,6 +33,8 @@ class MotionFilter:
         # mean, std for image normalization
         self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
+        tracker_height, tracker_width = 512, 512
+        self.online_point_tracker = PointTracker(tracker_height, tracker_width, tracker_config, tracker_path, estimator_config, estimator_path, isOnline=True)
         
     @torch.cuda.amp.autocast(enabled=True)
     def __context_encoder(self, image):
@@ -60,6 +67,9 @@ class MotionFilter:
         #### TODO: Here we could add the cotracker online function (every frame)
         ## self.video.cotracker(image) ## add the new image to cotracker
         #### TODO: (for future!) give queries based on Harris Corner Detecor (according to Tobias) or other features 
+        data["video_chunck"] = [image] 
+        self.track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+        self.track = torch.stack([self.track[..., 0] / (w - 1), self.track[..., 1] / (h - 1), self.track[..., 2]], dim=-1)
 
         ### always add first frame to the depth video ###
         if self.video.counter.value == 0:

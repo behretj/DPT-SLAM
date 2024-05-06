@@ -41,7 +41,7 @@ class FactorGraph:
         self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
         self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
-        self.cotracker_online = CoTrackerOnlineModel() ### TODO 1: do initializing here
+        #self.cotracker_online = CoTrackerOnlineModel() ### TODO 1: do initializing here
 
 
 
@@ -141,9 +141,6 @@ class FactorGraph:
             ## - tracks from self.video.cotracker
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
-
-            track = self.point_tracker(data, mode="tracks_at_motion_boundaries_online_droid", **kwargs)["tracks"]
-            track = torch.stack([track[..., 0] / (w - 1), track[..., 1] / (h - 1), track[..., 2]], dim=-1)
 
             #TODO online refinement
 
