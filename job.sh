@@ -21,7 +21,7 @@ echo "working"
 
 source /cluster/courses/3dv/data/team-4/DOT-SLAM/env_dot-slam/bin/activate
 
-cd /cluster/courses/3dv/data/team-4/DOT-SLAM/
+cd /home/ddacol/DOT-SLAM/tools/validate_tartanair.sh
 
 #### put python commands here
 

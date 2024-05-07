@@ -30,7 +30,15 @@ def image_stream(datapath, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 
             images += [ cv2.resize(cv2.imread(images_right[t]), (image_size[1], image_size[0])) ]
 
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
-        intrinsics = .8 * torch.as_tensor(intrinsics_vec)
+        
+        # TODO: changed intrinsics of camera depending on image size
+        # INPUT size TartanAir 480x640
+        # Processing size 384x512 DROID, 512x512 DOT
+        intrinsics = torch.as_tensor(intrinsics_vec)
+        intrinsics[0] *= image_size[1] / 640.0
+        intrinsics[1] *= image_size[0] / 480.0
+        intrinsics[2] *= image_size[1] / 640.0
+        intrinsics[3] *= image_size[0] / 480.0
 
         data.append((t, images, intrinsics))
 
