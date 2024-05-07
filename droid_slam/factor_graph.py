@@ -45,14 +45,6 @@ class FactorGraph:
 
 
 
-    def get_tracks
-
-    def update_track(self, t0, t1):
-        """
-        t0 = start image index
-        t1 = end image index (current time frame)
-        """
-
 
 
     def __filter_repeated_edges(self, ii, jj):

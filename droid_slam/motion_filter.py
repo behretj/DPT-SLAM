@@ -7,6 +7,9 @@ from droid_net import DroidNet
 
 import geom.projective_ops as pops
 from modules.corr import CorrBlock
+
+
+
 from thirdparty.DOT.dot.models.point_tracking import PointTracker
 
 
@@ -14,10 +17,10 @@ class MotionFilter:
     """ This class is used to filter incoming frames and extract features """
 
     def __init__(self, net, video, thresh=2.5, device="cuda:0",
-                    tracker_config="configs/cotracker2_patch_4_wind_8.json",
-                    tracker_path="checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
-                    estimator_config="configs/raft_patch_8.json",
-                    estimator_path="checkpoints/cvo_raft_patch_8.pth"):
+                    tracker_config="thirdparty/DOT/configs/cotracker2_patch_4_wind_8.json",
+                    tracker_path="thirdparty/DOT/checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
+                    estimator_config="thirdparty/DOT/configs/raft_patch_8.json",
+                    estimator_path="thirdparty/DOT/checkpoints/cvo_raft_patch_8.pth"):
         
         # split net modules
         self.cnet = net.cnet
@@ -50,6 +53,7 @@ class MotionFilter:
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
     def track(self, tstamp, image, depth=None, intrinsics=None):
+        print("track")
         """ main update operation - run on every frame in video """
 
         Id = lietorch.SE3.Identity(1,).data.squeeze()
@@ -67,7 +71,9 @@ class MotionFilter:
         #### TODO: Here we could add the cotracker online function (every frame)
         ## self.video.cotracker(image) ## add the new image to cotracker
         #### TODO: (for future!) give queries based on Harris Corner Detecor (according to Tobias) or other features 
-        data["video_chunck"] = [image] 
+        data = {}
+        data["video_chunk"] = torch.stack([image], dim=1)   #video =(Batch, frames, channel, height, width)
+
         self.track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
         self.track = torch.stack([self.track[..., 0] / (w - 1), self.track[..., 1] / (h - 1), self.track[..., 2]], dim=-1)
 

@@ -15,6 +15,7 @@ from torch.multiprocessing import Process
 
 class Droid:
     def __init__(self, args):
+        print("DROID init")
         super(Droid, self).__init__()
         self.load_weights(args.weights)
         self.args = args

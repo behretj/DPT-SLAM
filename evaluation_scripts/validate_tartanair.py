@@ -13,7 +13,9 @@ import time
 import yaml
 import argparse
 
+#from droid_slam.droid import Droid
 from droid import Droid
+
 
 def image_stream(datapath, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False):
     """ image generator """
@@ -85,9 +87,12 @@ if __name__ == '__main__':
         droid = Droid(args)
 
         scenedir = os.path.join(args.datapath, scene)
+
+        print("lenght image_stream(scenedir, stereo=args.stereo) : ", len(image_stream(scenedir, stereo=args.stereo)))
         
         for (tstamp, image, intrinsics) in tqdm(image_stream(scenedir, stereo=args.stereo)):
             droid.track(tstamp, image, intrinsics=intrinsics)
+        
 
         # fill in non-keyframe poses + global BA
         traj_est = droid.terminate(image_stream(scenedir))
