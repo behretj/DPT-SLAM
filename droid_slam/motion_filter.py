@@ -7,6 +7,7 @@ from droid_net import DroidNet
 
 import geom.projective_ops as pops
 from modules.corr import CorrBlock
+import torch.nn.functional as F
 
 
 
@@ -73,9 +74,17 @@ class MotionFilter:
         #### TODO: (for future!) give queries based on Harris Corner Detecor (according to Tobias) or other features 
         data = {}
         data["video_chunk"] = torch.stack([image], dim=1)   #video =(Batch, frames, channel, height, width)
+        B, T, C, h, w = data["video_chunk"].shape
+        
+        H, W = 512,512 #self.resolution
+        if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
+            data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
+            data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
+            data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
 
-        self.track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
-        self.track = torch.stack([self.track[..., 0] / (w - 1), self.track[..., 1] / (h - 1), self.track[..., 2]], dim=-1)
+
+        self.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+        self.cotracker_track = torch.stack([self.cotracker_track[..., 0] / (w - 1), self.cotracker_track[..., 1] / (h - 1), self.cotracker_track[..., 2]], dim=-1)
 
         ### always add first frame to the depth video ###
         if self.video.counter.value == 0:
