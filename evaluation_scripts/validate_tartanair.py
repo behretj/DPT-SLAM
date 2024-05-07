@@ -14,8 +14,12 @@ import yaml
 import argparse
 
 from droid import Droid
+import torchvision.transforms as transforms
+import torch.nn.functional as F
 
-def image_stream(datapath, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False):
+transform = transforms.Compose([transforms.ToTensor()])
+
+def image_stream(datapath=None, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False, add_new_img=False):
     """ image generator """
 
     # read all png images in folder
@@ -25,14 +29,25 @@ def image_stream(datapath, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 
 
     data = []
     for t in range(len(images_left)):
+        if add_new_img:
+            # reading and resizing the image for dot
+            image_dot = transform(cv2.cvtColor(cv2.imread(images_left[t]), cv2.COLOR_BGR2RGB))
+            C, h, w = image_dot.shape
+            # print('image_dot.shape', image_dot.shape)
+            image_dot = F.interpolate(image_dot[None], size=(512, 512), mode="bilinear")[0]
+            # print('image_dot.shape', image_dot.shape)
+
         images = [ cv2.resize(cv2.imread(images_left[t]), (image_size[1], image_size[0])) ]
         if stereo:
             images += [ cv2.resize(cv2.imread(images_right[t]), (image_size[1], image_size[0])) ]
 
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
         intrinsics = .8 * torch.as_tensor(intrinsics_vec)
-
-        data.append((t, images, intrinsics))
+        
+        if add_new_img:
+            data.append((t, images, intrinsics, image_dot))
+        else:
+            data.append((t, images, intrinsics))
 
     return data
 
@@ -86,8 +101,8 @@ if __name__ == '__main__':
 
         scenedir = os.path.join(args.datapath, scene)
         
-        for (tstamp, image, intrinsics) in tqdm(image_stream(scenedir, stereo=args.stereo)):
-            droid.track(tstamp, image, intrinsics=intrinsics)
+        for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
+            droid.track(tstamp, image, intrinsics=intrinsics, image_dot=image_dot)
 
         # fill in non-keyframe poses + global BA
         traj_est = droid.terminate(image_stream(scenedir))
