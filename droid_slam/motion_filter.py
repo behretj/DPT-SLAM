@@ -39,7 +39,9 @@ class MotionFilter:
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
         tracker_height, tracker_width = 512, 512
         self.online_point_tracker = PointTracker(tracker_height, tracker_width, tracker_config, tracker_path, estimator_config, estimator_path, isOnline=True)
-        
+        self.buffer = []
+        self.is_first_step = True
+
     @torch.cuda.amp.autocast(enabled=True)
     def __context_encoder(self, image):
         """ context features """
@@ -50,6 +52,34 @@ class MotionFilter:
     def __feature_encoder(self, image):
         """ features for correlation volume """
         return self.fnet(image).squeeze(0)
+    
+
+    @torch.cuda.amp.autocast(enabled=True)
+    @torch.no_grad()
+    def track_buffer(self, tstamp, image, depth=None, intrinsics=None):
+        self.buffer.append(image)
+        target_batch_size=4 #window
+        if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
+
+            print("track_buffer : Processing batch of  image tracker")
+            data = {}
+            data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1)   #video =(Batch, frames, channel, height, width)
+            B, T, C, h, w = data["video_chunk"].shape
+                    
+            H, W = 512,512 #self.resolution
+            if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
+                data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
+                data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
+                data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
+            print("track_buffer : data['video_chunk']", data["video_chunk"].shape)
+            self.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+            if self.is_first_step:
+                self.is_first_step = False
+            else:
+                self.cotracker_track = torch.stack([self.cotracker_track[..., 0] / (w - 1), self.cotracker_track[..., 1] / (h - 1), self.cotracker_track[..., 2]], dim=-1)
+                print("track : self.cotracker_track.shape", self.cotracker_track.shape)
+                print("track : self.cotracker_track", self.cotracker_track)
+        self.track(tstamp, image, depth=depth, intrinsics=intrinsics)
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
@@ -72,19 +102,8 @@ class MotionFilter:
         #### TODO: Here we could add the cotracker online function (every frame)
         ## self.video.cotracker(image) ## add the new image to cotracker
         #### TODO: (for future!) give queries based on Harris Corner Detecor (according to Tobias) or other features 
-        data = {}
-        data["video_chunk"] = torch.stack([image], dim=1)   #video =(Batch, frames, channel, height, width)
-        B, T, C, h, w = data["video_chunk"].shape
         
-        H, W = 512,512 #self.resolution
-        if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
-            data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
-            data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
-            data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
 
-
-        self.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
-        self.cotracker_track = torch.stack([self.cotracker_track[..., 0] / (w - 1), self.cotracker_track[..., 1] / (h - 1), self.cotracker_track[..., 2]], dim=-1)
 
         ### always add first frame to the depth video ###
         if self.video.counter.value == 0:
