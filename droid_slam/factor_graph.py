@@ -1,12 +1,15 @@
 import torch
 import lietorch
 import numpy as np
+import sys
+import os
 
 import matplotlib.pyplot as plt
 from lietorch import SE3
 from modules.corr import CorrBlock, AltCorrBlock
 import geom.projective_ops as pops
 
+from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
 
 class FactorGraph:
     def __init__(self, video, update_op, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
@@ -41,11 +44,9 @@ class FactorGraph:
         self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
         self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
-        #self.cotracker_online = CoTrackerOnlineModel() ### TODO 1: do initializing here
-
-
-
-
+        self.optical_flow_refiner = OpticalFlow(height=512, width=512,
+                                                config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
+                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
 
     def __filter_repeated_edges(self, ii, jj):
         """ remove duplicate edges """
@@ -133,11 +134,18 @@ class FactorGraph:
             ## - tracks from self.video.cotracker
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
+            # TODO AFTER MERGE
+            track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
+            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
-            #TODO online refinement
+            tstamps_list = (self.video.tstamp).tolist()
+            ii_list = (ii).tolist()
+            jj_list = (jj).tolist()
 
-            target, _ = self.video.reproject(ii, jj)
-            weight = torch.zeros_like(target)
+            sources_list = [int(tstamps_list[i]) for i in ii_list]
+            targets_list = [int(tstamps_list[i]) for i in jj_list]
+
+            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)

@@ -15,7 +15,6 @@ from torch.multiprocessing import Process
 
 class Droid:
     def __init__(self, args):
-        print("DROID init")
         super(Droid, self).__init__()
         self.load_weights(args.weights)
         self.args = args
@@ -58,14 +57,13 @@ class Droid:
 
         self.net.load_state_dict(state_dict)
         self.net.to("cuda:0").eval()
-        
 
-    def track(self, tstamp, image, depth=None, intrinsics=None):
+    def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
         """ main thread - update map """
 
         with torch.no_grad():
             # check there is enough motion
-            self.filterx.track_buffer(tstamp, image, depth, intrinsics)
+            self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot)
 
             # local bundle adjustment
             self.frontend()

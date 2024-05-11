@@ -9,8 +9,6 @@ import geom.projective_ops as pops
 from modules.corr import CorrBlock
 import torch.nn.functional as F
 
-
-
 from thirdparty.DOT.dot.models.point_tracking import PointTracker
 
 
@@ -52,11 +50,11 @@ class MotionFilter:
     def __feature_encoder(self, image):
         """ features for correlation volume """
         return self.fnet(image).squeeze(0)
-    
+
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
-    def track_buffer(self, tstamp, image, depth=None, intrinsics=None):
+    def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
         self.buffer.append(image)
         target_batch_size=4 #window
         if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
@@ -65,7 +63,7 @@ class MotionFilter:
             data = {}
             data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1)   #video =(Batch, frames, channel, height, width)
             B, T, C, h, w = data["video_chunk"].shape
-                    
+
             H, W = 512,512 #self.resolution
             if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
                 data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
@@ -79,12 +77,11 @@ class MotionFilter:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
                 print("track : self.video.cotracker_track.shape", self.video.cotracker_track.shape)
                 print("track : self.video.cotracker_track", self.video.cotracker_track)
-        self.track(tstamp, image, depth=depth, intrinsics=intrinsics)
+        self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot)
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
-    def track(self, tstamp, image, depth=None, intrinsics=None):
-        print("track")
+    def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
         """ main update operation - run on every frame in video """
 
         Id = lietorch.SE3.Identity(1,).data.squeeze()
@@ -102,14 +99,12 @@ class MotionFilter:
         #### TODO: Here we could add the cotracker online function (every frame)
         ## self.video.cotracker(image) ## add the new image to cotracker
         #### TODO: (for future!) give queries based on Harris Corner Detecor (according to Tobias) or other features 
-        
-
 
         ### always add first frame to the depth video ###
         if self.video.counter.value == 0:
             net, inp = self.__context_encoder(inputs[:,[0]])
             self.net, self.inp, self.fmap = net, inp, gmap
-            self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 8.0, gmap, net[0,0], inp[0,0])
+            self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 8.0, gmap, net[0,0], inp[0,0], image_dot)
 
         ### only add new frame if there is enough motion ###
         else:                
@@ -125,9 +120,9 @@ class MotionFilter:
                 self.count = 0
                 net, inp = self.__context_encoder(inputs[:,[0]])
                 self.net, self.inp, self.fmap = net, inp, gmap
-                self.video.append(tstamp, image[0], None, None, depth, intrinsics / 8.0, gmap, net[0], inp[0])
-
+                self.video.append(tstamp, image[0], None, None, depth, intrinsics / 8.0, gmap, net[0], inp[0], image_dot)
             else:
+                self.video.append(image_dot)
                 self.count += 1
 
 
