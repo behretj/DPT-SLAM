@@ -59,7 +59,6 @@ class MotionFilter:
         target_batch_size=4 #window
         if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
 
-            print("track_buffer : Processing batch of  image tracker")
             data = {}
             data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1)   #video =(Batch, frames, channel, height, width)
             B, T, C, h, w = data["video_chunk"].shape
@@ -69,14 +68,12 @@ class MotionFilter:
                 data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
                 data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
                 data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
-            print("track_buffer : data['video_chunk']", data["video_chunk"].shape)
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.is_first_step:
                 self.is_first_step = False
             else:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
                 print("track : self.video.cotracker_track.shape", self.video.cotracker_track.shape)
-                print("track : self.video.cotracker_track", self.video.cotracker_track)
         self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot)
 
     @torch.cuda.amp.autocast(enabled=True)
