@@ -72,13 +72,13 @@ class MotionFilter:
                 data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
                 data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
             print("track_buffer : data['video_chunk']", data["video_chunk"].shape)
-            self.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+            self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.is_first_step:
                 self.is_first_step = False
             else:
-                self.cotracker_track = torch.stack([self.cotracker_track[..., 0] / (w - 1), self.cotracker_track[..., 1] / (h - 1), self.cotracker_track[..., 2]], dim=-1)
-                print("track : self.cotracker_track.shape", self.cotracker_track.shape)
-                print("track : self.cotracker_track", self.cotracker_track)
+                self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
+                print("track : self.video.cotracker_track.shape", self.video.cotracker_track.shape)
+                print("track : self.video.cotracker_track", self.video.cotracker_track)
         self.track(tstamp, image, depth=depth, intrinsics=intrinsics)
 
     @torch.cuda.amp.autocast(enabled=True)
