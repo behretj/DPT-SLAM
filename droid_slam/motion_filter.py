@@ -60,7 +60,6 @@ class MotionFilter:
         self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot) # add images to video (both the org and the reshaped one)
         if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
 
-            print("track_buffer : Processing batch of  image tracker")
             data = {}
             data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1).permute(1, 0, 2, 3)[None]   # video =(Batch, frames, channel, height, width)
             print('track_buffer: data["video_chunk"].shape', data["video_chunk"].shape)
@@ -71,7 +70,6 @@ class MotionFilter:
                 data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
                 data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
                 data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
-            print("track_buffer : data['video_chunk']", data["video_chunk"].shape)
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.is_first_step:
                 self.is_first_step = False
