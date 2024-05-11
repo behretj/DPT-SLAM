@@ -7,12 +7,19 @@ from droid_net import DroidNet
 
 import geom.projective_ops as pops
 from modules.corr import CorrBlock
+import torch.nn.functional as F
+
+from thirdparty.DOT.dot.models.point_tracking import PointTracker
 
 
 class MotionFilter:
     """ This class is used to filter incoming frames and extract features """
 
-    def __init__(self, net, video, thresh=2.5, device="cuda:0"):
+    def __init__(self, net, video, thresh=2.5, device="cuda:0",
+                    tracker_config="thirdparty/DOT/configs/cotracker2_patch_4_wind_8.json",
+                    tracker_path="thirdparty/DOT/checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
+                    estimator_config="thirdparty/DOT/configs/raft_patch_8.json",
+                    estimator_path="thirdparty/DOT/checkpoints/cvo_raft_patch_8.pth"):
         
         # split net modules
         self.cnet = net.cnet
@@ -28,7 +35,11 @@ class MotionFilter:
         # mean, std for image normalization
         self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
-        
+        tracker_height, tracker_width = 512, 512
+        self.online_point_tracker = PointTracker(tracker_height, tracker_width, tracker_config, tracker_path, estimator_config, estimator_path, isOnline=True)
+        self.buffer = []
+        self.is_first_step = True
+
     @torch.cuda.amp.autocast(enabled=True)
     def __context_encoder(self, image):
         """ context features """
@@ -39,6 +50,34 @@ class MotionFilter:
     def __feature_encoder(self, image):
         """ features for correlation volume """
         return self.fnet(image).squeeze(0)
+
+
+    @torch.cuda.amp.autocast(enabled=True)
+    @torch.no_grad()
+    def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
+        self.buffer.append(image)
+        target_batch_size=4 #window
+        if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
+
+            print("track_buffer : Processing batch of  image tracker")
+            data = {}
+            data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1)   #video =(Batch, frames, channel, height, width)
+            B, T, C, h, w = data["video_chunk"].shape
+
+            H, W = 512,512 #self.resolution
+            if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
+                data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
+                data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
+                data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
+            print("track_buffer : data['video_chunk']", data["video_chunk"].shape)
+            self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+            if self.is_first_step:
+                self.is_first_step = False
+            else:
+                self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
+                print("track : self.video.cotracker_track.shape", self.video.cotracker_track.shape)
+                print("track : self.video.cotracker_track", self.video.cotracker_track)
+        self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot)
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()

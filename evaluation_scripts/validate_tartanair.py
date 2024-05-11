@@ -43,7 +43,7 @@ def image_stream(datapath=None, image_size=[384, 512], intrinsics_vec=[320.0, 32
 
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
         intrinsics = .8 * torch.as_tensor(intrinsics_vec)
-        
+
         if add_new_img:
             data.append((t, images, intrinsics, image_dot))
         else:
@@ -100,7 +100,8 @@ if __name__ == '__main__':
         droid = Droid(args)
 
         scenedir = os.path.join(args.datapath, scene)
-        
+
+
         for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
             droid.track(tstamp, image, intrinsics=intrinsics, image_dot=image_dot)
 
