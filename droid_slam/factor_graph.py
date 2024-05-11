@@ -21,8 +21,10 @@ class FactorGraph:
         self.upsample = upsample
 
         # operator at 1/8 resolution
-        self.ht = ht = video.ht // 8
-        self.wd = wd = video.wd // 8
+        video.ht = 128
+        video.wd = 128
+        self.ht = ht = 128 # video.ht // 8
+        self.wd = wd = 128 # video.wd // 8
 
         self.coords0 = pops.coords_grid(ht, wd, device=device)
         self.ii = torch.as_tensor([], dtype=torch.long, device=device)
@@ -135,15 +137,19 @@ class FactorGraph:
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             # TODO AFTER MERGE
-            track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
-            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
-
+            track = self.video.cotracker_track
+            print('add_factor: self.video.cotracker_track.shape', track.shape)
+            
             tstamps_list = (self.video.tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
+            print(f'add_factor: source_list" {sources_list}')
+            print(f'add_factor: targets_list" {targets_list}')
+            # track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
+            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
             target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
 

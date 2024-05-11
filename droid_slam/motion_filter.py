@@ -36,7 +36,7 @@ class MotionFilter:
         self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
         tracker_height, tracker_width = 512, 512
-        self.online_point_tracker = PointTracker(tracker_height, tracker_width, tracker_config, tracker_path, estimator_config, estimator_path, isOnline=True)
+        self.online_point_tracker = PointTracker(tracker_height, tracker_width, tracker_config, tracker_path, estimator_config, estimator_path, isOnline=True).to('cuda')
         self.buffer = []
         self.is_first_step = True
 
@@ -55,13 +55,15 @@ class MotionFilter:
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
     def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
-        self.buffer.append(image)
+        self.buffer.append(image_dot.to('cuda'))
         target_batch_size=4 #window
+        self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot) # add images to video (both the org and the reshaped one)
         if len(self.buffer)%target_batch_size==0 and len(self.buffer)!=0:
 
             print("track_buffer : Processing batch of  image tracker")
             data = {}
-            data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1)   #video =(Batch, frames, channel, height, width)
+            data["video_chunk"] = torch.stack(self.buffer[-4*2:], dim=1).permute(1, 0, 2, 3)[None]   # video =(Batch, frames, channel, height, width)
+            print('track_buffer: data["video_chunk"].shape', data["video_chunk"].shape)
             B, T, C, h, w = data["video_chunk"].shape
 
             H, W = 512,512 #self.resolution
@@ -76,8 +78,7 @@ class MotionFilter:
             else:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
                 print("track : self.video.cotracker_track.shape", self.video.cotracker_track.shape)
-                print("track : self.video.cotracker_track", self.video.cotracker_track)
-        self.track(tstamp, image, depth=depth, intrinsics=intrinsics, image_dot=image_dot)
+                # print("track : self.video.cotracker_track", self.video.cotracker_track)
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
