@@ -42,11 +42,17 @@ class DepthVideo:
 
         # initialize poses to identity transformation
         self.poses[:] = torch.as_tensor([0, 0, 0, 0, 0, 0, 1], dtype=torch.float, device="cuda")
+
+        self.image_dot = []
         
     def get_lock(self):
         return self.counter.get_lock()
 
     def __item_setter(self, index, item):
+        if (len(item) == 1): # not key frame, only add to image_dot
+            self.image_dot.append(item[0])
+            # print('Adding non-keyframe')
+            return
         if isinstance(index, int) and index >= self.counter.value:
             self.counter.value = index + 1
         
@@ -56,6 +62,9 @@ class DepthVideo:
         # self.dirty[index] = True
         self.tstamp[index] = item[0]
         self.images[index] = item[1]
+        # print(f'adding image {index}')
+        # print('self.counter.value', self.counter.value)
+        # print(item[1])
 
         if item[2] is not None:
             self.poses[index] = item[2]
@@ -78,6 +87,10 @@ class DepthVideo:
 
         if len(item) > 8:
             self.inps[index] = item[8]
+
+        if len(item) > 9:
+            self.image_dot.append(item[9])
+            # print(f'Adding dot image')
 
     def __setitem__(self, index, item):
         with self.get_lock():
