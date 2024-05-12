@@ -203,6 +203,10 @@ class DepthVideo:
             if t1 is None:
                 t1 = max(ii.max().item(), jj.max().item()) + 1
 
+            # TODO: input fixed damping values (eta)
+            # check which value performs best (lowest ATE)
+            eta = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to("cuda").contiguous()
+
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)
 
