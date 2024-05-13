@@ -19,16 +19,16 @@ export CXXFLAGS="-std=c++17"
 
 echo "working"
 
-export PYTHONPATH="/home/tducrey/DOT-SLAM/droid_slam/thirdparty/DOT"
+export PYTHONPATH="/home/ddacol/DOT-SLAM/droid_slam/thirdparty/DOT"
 echo $PYTHONPATH
 
 source /cluster/courses/3dv/data/team-4/DOT-SLAM/env_dot-slam/bin/activate
 
 # cd /cluster/courses/3dv/data/team-4/DOT-SLAM/
-cd /home/tducrey/DOT-SLAM
+cd /home/ddacol/DOT-SLAM
 
 #### put python commands here
 
 ./tools/validate_tartanair.sh --plot_curve
 
-echo "finished" 
+echo "finished"
