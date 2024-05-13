@@ -77,7 +77,7 @@ class MotionFilter:
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.target_batch_size<=tstamp:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
-                # all the images have been registered in CoTracker, we can track them now:
+                # all the images have been registered in CoTracker, we can add them to Droid now:
                 for args in self.droid_buffer:
                     self.track(*args)
                 self.droid_buffer.clear()
@@ -88,8 +88,8 @@ class MotionFilter:
         """ main update operation - run on every frame in video """
 
         Id = lietorch.SE3.Identity(1,).data.squeeze()
-        ht = image.shape[-2] // 8
-        wd = image.shape[-1] // 8
+        # ht = image.shape[-2] // 8
+        # wd = image.shape[-1] // 8
 
         # normalize images
         inputs = image[None, :, [2,1,0]].to(self.device) / 255.0
@@ -107,12 +107,14 @@ class MotionFilter:
 
         ### only add new frame if there is enough motion ###
         else:                
-            # index correlation volume
-            coords0 = pops.coords_grid(ht, wd, device=self.device)[None,None]
-            corr = CorrBlock(self.fmap[None,[0]], gmap[None,[0]])(coords0)
+            #### NOT needed anymore
+            # coords0 = pops.coords_grid(ht, wd, device=self.device)[None,None]
+            # corr = CorrBlock(self.fmap[None,[0]], gmap[None,[0]])(coords0)
 
             # approximate flow magnitude using 1 update iteration
             # _, delta, weight = self.update(self.net[None], self.inp[None], corr)
+            
+            
             ### "Doing approximate flow estimation, replacing the above line:
             src_points = self.video.cotracker_track[:, self.last_tstamp]
             tgt_points = self.video.cotracker_track[:, tstamp]
