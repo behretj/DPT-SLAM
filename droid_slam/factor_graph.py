@@ -496,22 +496,15 @@ class FactorGraph:
                 weight.append(w)
 
             # Convert the lists to PyTorch tensors and add the necessary dimensions
-            target = torch.stack(target, dim=0)[None]
-            weight = torch.stack(weight, dim=0)[None]
+            target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
+            weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
 
-            target = target.squeeze(0).permute(0, 3, 1, 2).to("cuda").contiguous()
-            weight = weight.squeeze(0).permute(0, 3, 1, 2).to("cuda").contiguous()
+            target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
 
             # Input fixed damping values (eta)
             # check which value performs best (lowest ATE)
-            damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to("cuda").contiguous()
-
-            # Check the shapes of the tensors
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print(target.shape)
-            print(weight.shape)
-            print(damping.shape)
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to(device="cuda", dtype=torch.float).contiguous()
 
             # dense bundle adjustment
             self.video.ba(target, weight, damping, ii, jj, t0, t1, 

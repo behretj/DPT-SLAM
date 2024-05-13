@@ -203,9 +203,20 @@ class DepthVideo:
             if t1 is None:
                 t1 = max(ii.max().item(), jj.max().item()) + 1
 
-            # target = target.float()
-            # weight = weight.float()
-            # eta = eta.float()
+
+
+            # Check the shapes of the tensors
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print("POSES shape:", self.poses.shape)
+            print("Depths shape:", self.disps.shape)
+            print("Depths sens shape:", self.disps_sens.shape)
+            print("Intrinsics[0]:", self.intrinsics[0])
+            print("Target shape: ", target.shape)
+            print("Weight shape: ", weight.shape)
+            print("Damping shape: ", eta.shape)
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+
 
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)
