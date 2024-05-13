@@ -34,8 +34,8 @@ class FactorGraph:
         self.corr, self.net, self.inp = None, None, None
         self.damping = 1e-6 * torch.ones_like(self.video.disps)
 
-        self.target = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
-        self.weight = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.target = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.weight = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
         # inactive factors
         self.ii_inac = torch.as_tensor([], dtype=torch.long, device=device)
@@ -43,8 +43,8 @@ class FactorGraph:
         self.ii_bad = torch.as_tensor([], dtype=torch.long, device=device)
         self.jj_bad = torch.as_tensor([], dtype=torch.long, device=device)
 
-        self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
-        self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
         self.optical_flow_refiner = OpticalFlow(height=512, width=512,
                                                 config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
@@ -160,19 +160,29 @@ class FactorGraph:
         # reprojection factors
         self.net = net if self.net is None else torch.cat([self.net, net], 1)
 
-        self.target = torch.cat([self.target, target], 1)
-        self.weight = torch.cat([self.weight, weight], 1)
+        # self.target = torch.cat([self.target, target], 1)
+        # target.shape: 1, 60, 128, 128, 2
+        # self.target.shape: 1, 120, 128, 128, 2 
+        # self.weight = torch.cat([self.weight, weight], 1)
+        # the size of weight is the same
 
     @torch.cuda.amp.autocast(enabled=True)
     def rm_factors(self, mask, store=False):
         """ drop edges from factor graph """
 
+        tstamps_list = (self.video.tstamp).tolist()
+        ii_list = (self.ii[mask]).tolist()
+        jj_list = (self.jj[mask]).tolist()
+
+        sources_list = [int(tstamps_list[i]) for i in ii_list]
+        targets_list = [int(tstamps_list[i]) for i in jj_list]
+
         # store estimated factors
         if store:
             self.ii_inac = torch.cat([self.ii_inac, self.ii[mask]], 0)
             self.jj_inac = torch.cat([self.jj_inac, self.jj[mask]], 0)
-            self.target_inac = torch.cat([self.target_inac, self.target[:,mask]], 1)
-            self.weight_inac = torch.cat([self.weight_inac, self.weight[:,mask]], 1)
+            # self.target_inac = torch.cat([self.target_inac, self.target[:,mask]], 1)
+            # self.weight_inac = torch.cat([self.weight_inac, self.weight[:,mask]], 1)
 
         self.ii = self.ii[~mask]
         self.jj = self.jj[~mask]
@@ -187,8 +197,12 @@ class FactorGraph:
         if self.inp is not None:
             self.inp = self.inp[:,~mask]
 
-        self.target = self.target[:,~mask]
-        self.weight = self.weight[:,~mask]
+        self.optical_flow_refiner.rm_flows(sources_list, targets_list, store=store)
+
+        # self.target = self.target[:,~mask]
+        # self.weight = self.weight[:,~mask]
+
+
 
 
     @torch.cuda.amp.autocast(enabled=True)
@@ -214,8 +228,17 @@ class FactorGraph:
         if torch.any(m):
             self.ii_inac = self.ii_inac[~m]
             self.jj_inac = self.jj_inac[~m]
-            self.target_inac = self.target_inac[:,~m]
-            self.weight_inac = self.weight_inac[:,~m]
+
+            tstamps_list = (self.video.tstamp).tolist()
+            ii_list = (self.ii[m]).tolist()
+            jj_list = (self.jj[m]).tolist()
+
+            sources_list = [int(tstamps_list[i]) for i in ii_list]
+            targets_list = [int(tstamps_list[i]) for i in jj_list]
+            self.optical_flow_refiner.reset_inac(sources_list, targets_list)
+
+            # self.target_inac = self.target_inac[:,~m]
+            # self.weight_inac = self.weight_inac[:,~m]
 
         m = (self.ii == ix) | (self.jj == ix)
 
