@@ -32,3 +32,5 @@ cd /home/ddacol/DOT-SLAM
 ./tools/validate_tartanair.sh --plot_curve
 
 echo "finished"
+
+echo "finished" 
