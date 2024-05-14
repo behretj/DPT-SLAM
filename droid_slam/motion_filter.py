@@ -119,6 +119,14 @@ class MotionFilter:
             src_points = self.video.cotracker_track[:, self.last_tstamp]
             tgt_points = self.video.cotracker_track[:, tstamp]
             grid = get_grid(128, 128).to("cuda")
+
+
+            print("_________________________________")
+            print("SRC points shape: ", src_points.shape)
+            print("TARGET points shape: ", tgt_points.shape)
+
+
+
             est_flow, _ = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
 
             # check motion magnitue / add new frame to video
