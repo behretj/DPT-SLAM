@@ -80,10 +80,10 @@ class DroidFrontend:
         self.t0 = 0
         self.t1 = self.video.counter.value
 
-        print("______________________________________")
-        print("T0 and T1: ", self.t0, self.t1)
-        print("tstamps: ", self.video.tstamp)
-        print("______________________________________")
+        # print("______________________________________", flush=True)
+        # print("T0 and T1: ", self.t0, self.t1, flush=True)
+        # print("tstamps: ", self.video.tstamp, flush=True)
+        # print("______________________________________", flush=True)
 
         # 1 add frame pairs to graph based on neighborhood
         #   compute refined flow and weights for new pairs in graph

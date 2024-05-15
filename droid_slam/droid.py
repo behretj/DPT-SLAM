@@ -63,10 +63,10 @@ class Droid:
 
         with torch.no_grad():
             # check there is enough motion
-            self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot)
+            self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot, self.frontend)
 
             # local bundle adjustment
-            self.frontend()
+            # self.frontend()
 
             # global bundle adjustment
             # self.backend()
