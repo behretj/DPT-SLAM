@@ -60,7 +60,7 @@ class MotionFilter:
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
-    def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
+    def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None, frontend=None):
         self.buffer.append(image_dot.to('cuda'))
         self.droid_buffer.append((tstamp, image, depth, intrinsics, image_dot.to('cuda')))
         
@@ -82,6 +82,8 @@ class MotionFilter:
                 # all the images have been registered in CoTracker, we can add them to Droid now:
                 for args in self.droid_buffer:
                     self.track(*args)
+                    # TODO: think about this (probably bad practice!)
+                    frontend()
                 self.droid_buffer.clear()
 
     @torch.cuda.amp.autocast(enabled=True)
