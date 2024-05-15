@@ -80,11 +80,6 @@ class DroidFrontend:
         self.t0 = 0
         self.t1 = self.video.counter.value
 
-        print("______________________________________")
-        print("T0 and T1: ", self.t0, self.t1)
-        print("tstamps: ", self.video.tstamp)
-        print("______________________________________")
-
         # 1 add frame pairs to graph based on neighborhood
         #   compute refined flow and weights for new pairs in graph
         self.graph.add_neighborhood_factors(self.t0, self.t1, r=3)
@@ -119,7 +114,7 @@ class DroidFrontend:
         """ main update """
 
         # do initialization
-        if not self.is_initialized and self.video.counter.value == self.warmup:
+        if not self.is_initialized and self.video.counter.value >= self.warmup:
             self.__initialize()
             
         # do update

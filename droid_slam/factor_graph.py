@@ -463,6 +463,7 @@ class FactorGraph:
 
             if use_inactive:
                 m = (self.ii_inac >= t0 - 3) & (self.jj_inac >= t0 - 3)
+                num_inac = len(self.ii_inac[m])
                 ii = torch.cat([self.ii_inac[m], self.ii], 0)
                 jj = torch.cat([self.jj_inac[m], self.jj], 0)
                 # target = torch.cat([self.target_inac[:,m], self.target], 1)
@@ -489,8 +490,16 @@ class FactorGraph:
                 i = sources_list[idx]
                 j = targets_list[idx]
                 # Get the flow and weight from the dictionaries
-                flow = self.optical_flow_refiner.refined_flow[i][j]
-                w = self.optical_flow_refiner.refined_weight[i][j]
+                if use_inactive:
+                    if idx < num_inac:
+                        flow = self.optical_flow_refiner.refined_flow_inac[i][j]
+                        w = self.optical_flow_refiner.refined_weight_inac[i][j]
+                    else:
+                        flow = self.optical_flow_refiner.refined_flow[i][j]
+                        w = self.optical_flow_refiner.refined_weight[i][j]
+                else:
+                    flow = self.optical_flow_refiner.refined_flow[i][j]
+                    w = self.optical_flow_refiner.refined_weight[i][j]
 
                 target.append(flow)
                 weight.append(w)

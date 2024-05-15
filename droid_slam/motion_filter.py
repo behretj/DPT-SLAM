@@ -63,6 +63,7 @@ class MotionFilter:
     def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
         self.buffer.append(image_dot.to('cuda'))
         self.droid_buffer.append((tstamp, image, depth, intrinsics, image_dot.to('cuda')))
+        
         if (tstamp + 1) % self.target_batch_size == 0:
             data = {}
             data["video_chunk"] = torch.stack(list(self.buffer), dim=1).permute(1, 0, 2, 3)[None]   # video =(Batch, frames, channel, height, width)
