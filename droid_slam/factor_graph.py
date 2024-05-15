@@ -21,8 +21,10 @@ class FactorGraph:
         self.upsample = upsample
 
         # operator at 1/8 resolution
-        self.ht = ht = video.ht // 8
-        self.wd = wd = video.wd // 8
+        video.ht = 128
+        video.wd = 128
+        self.ht = ht = 128 # video.ht // 8
+        self.wd = wd = 128 # video.wd // 8
 
         self.coords0 = pops.coords_grid(ht, wd, device=device)
         self.ii = torch.as_tensor([], dtype=torch.long, device=device)
@@ -32,8 +34,8 @@ class FactorGraph:
         self.corr, self.net, self.inp = None, None, None
         self.damping = 1e-6 * torch.ones_like(self.video.disps)
 
-        self.target = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
-        self.weight = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.target = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.weight = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
         # inactive factors
         self.ii_inac = torch.as_tensor([], dtype=torch.long, device=device)
@@ -41,8 +43,8 @@ class FactorGraph:
         self.ii_bad = torch.as_tensor([], dtype=torch.long, device=device)
         self.jj_bad = torch.as_tensor([], dtype=torch.long, device=device)
 
-        self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
-        self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.target_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
+        # self.weight_inac = torch.zeros([1, 0, ht, wd, 2], device=device, dtype=torch.float)
 
         self.optical_flow_refiner = OpticalFlow(height=512, width=512,
                                                 config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
@@ -135,15 +137,19 @@ class FactorGraph:
             ## - interpolation from DOT
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             # TODO AFTER MERGE
-            track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
-            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
-
+            track = self.video.cotracker_track
+            print('add_factor: self.video.cotracker_track.shape', track.shape)
+            
             tstamps_list = (self.video.tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
+            print(f'add_factor: source_list" {sources_list}')
+            print(f'add_factor: targets_list" {targets_list}')
+            # track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
+            video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
             target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
 
@@ -154,19 +160,29 @@ class FactorGraph:
         # reprojection factors
         self.net = net if self.net is None else torch.cat([self.net, net], 1)
 
-        self.target = torch.cat([self.target, target], 1)
-        self.weight = torch.cat([self.weight, weight], 1)
+        # self.target = torch.cat([self.target, target], 1)
+        # target.shape: 1, 60, 128, 128, 2
+        # self.target.shape: 1, 120, 128, 128, 2 
+        # self.weight = torch.cat([self.weight, weight], 1)
+        # the size of weight is the same
 
     @torch.cuda.amp.autocast(enabled=True)
     def rm_factors(self, mask, store=False):
         """ drop edges from factor graph """
 
+        tstamps_list = (self.video.tstamp).tolist()
+        ii_list = (self.ii[mask]).tolist()
+        jj_list = (self.jj[mask]).tolist()
+
+        sources_list = [int(tstamps_list[i]) for i in ii_list]
+        targets_list = [int(tstamps_list[i]) for i in jj_list]
+
         # store estimated factors
         if store:
             self.ii_inac = torch.cat([self.ii_inac, self.ii[mask]], 0)
             self.jj_inac = torch.cat([self.jj_inac, self.jj[mask]], 0)
-            self.target_inac = torch.cat([self.target_inac, self.target[:,mask]], 1)
-            self.weight_inac = torch.cat([self.weight_inac, self.weight[:,mask]], 1)
+            # self.target_inac = torch.cat([self.target_inac, self.target[:,mask]], 1)
+            # self.weight_inac = torch.cat([self.weight_inac, self.weight[:,mask]], 1)
 
         self.ii = self.ii[~mask]
         self.jj = self.jj[~mask]
@@ -181,8 +197,12 @@ class FactorGraph:
         if self.inp is not None:
             self.inp = self.inp[:,~mask]
 
-        self.target = self.target[:,~mask]
-        self.weight = self.weight[:,~mask]
+        self.optical_flow_refiner.rm_flows(sources_list, targets_list, store=store)
+
+        # self.target = self.target[:,~mask]
+        # self.weight = self.weight[:,~mask]
+
+
 
 
     @torch.cuda.amp.autocast(enabled=True)
@@ -208,8 +228,17 @@ class FactorGraph:
         if torch.any(m):
             self.ii_inac = self.ii_inac[~m]
             self.jj_inac = self.jj_inac[~m]
-            self.target_inac = self.target_inac[:,~m]
-            self.weight_inac = self.weight_inac[:,~m]
+
+            tstamps_list = (self.video.tstamp).tolist()
+            ii_list = (self.ii[m]).tolist()
+            jj_list = (self.jj[m]).tolist()
+
+            sources_list = [int(tstamps_list[i]) for i in ii_list]
+            targets_list = [int(tstamps_list[i]) for i in jj_list]
+            self.optical_flow_refiner.reset_inac(sources_list, targets_list)
+
+            # self.target_inac = self.target_inac[:,~m]
+            # self.weight_inac = self.weight_inac[:,~m]
 
         m = (self.ii == ix) | (self.jj == ix)
 
@@ -398,3 +427,91 @@ class FactorGraph:
 
         ii, jj = torch.as_tensor(es, device=self.device).unbind(dim=-1)
         self.add_factors(ii, jj, remove)
+
+
+    """
+    Update function which performs BA
+    - substitutes update of DROID
+    """
+    # TODO: check if autocast is necessary if we only use BA and not droid's GRU
+    @torch.cuda.amp.autocast(enabled=True)
+    def update_DOT_SLAM(self, t0=None, t1=None, itrs=2, use_inactive=False, EP=1e-7, motion_only=False):
+        """ run update operator on factor graph """
+
+        # # motion features
+        # with torch.cuda.amp.autocast(enabled=False):
+        #     coords1, mask = self.video.reproject(self.ii, self.jj)
+        #     ### motn = torch.cat([self.target - self.coords0, coords1 - self.target], dim=-1)
+        #     motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
+        #     motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
+        
+        # # correlation features
+        # corr = self.corr(coords1)
+
+        # self.net, delta, weight, damping, upmask = \
+        #     self.update_op(self.net, self.inp, corr, motn, self.ii, self.jj)
+
+        if t0 is None:
+            t0 = max(1, self.ii.min().item()+1)
+
+        with torch.cuda.amp.autocast(enabled=False):
+            # self.target = coords1 + delta.to(dtype=torch.float)
+            # self.weight = weight.to(dtype=torch.float)
+
+            # ht, wd = self.coords0.shape[0:2]
+            # self.damping[torch.unique(self.ii)] = damping
+
+            if use_inactive:
+                m = (self.ii_inac >= t0 - 3) & (self.jj_inac >= t0 - 3)
+                ii = torch.cat([self.ii_inac[m], self.ii], 0)
+                jj = torch.cat([self.jj_inac[m], self.jj], 0)
+                # target = torch.cat([self.target_inac[:,m], self.target], 1)
+                # weight = torch.cat([self.weight_inac[:,m], self.weight], 1)
+
+            else:
+                # ii, jj, target, weight = self.ii, self.jj, self.target, self.weight
+                ii, jj = self.ii, self.jj
+
+            # target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+            # weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+
+            tstamps_list = (self.video.tstamp).tolist()
+            ii_list = (ii).tolist()
+            jj_list = (jj).tolist()
+
+            sources_list = [int(tstamps_list[i]) for i in ii_list]
+            targets_list = [int(tstamps_list[i]) for i in jj_list]
+
+            # Iterate over the ii and jj lists
+            l = len(sources_list)
+            target, weight = [], []
+            for idx in range(l):
+                i = sources_list[idx]
+                j = targets_list[idx]
+                # Get the flow and weight from the dictionaries
+                flow = self.optical_flow_refiner.refined_flow[i][j]
+                w = self.optical_flow_refiner.refined_weight[i][j]
+
+                target.append(flow)
+                weight.append(w)
+
+            # Convert the lists to PyTorch tensors and add the necessary dimensions
+            target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
+            weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
+
+            target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
+
+            # Input fixed damping values (eta)
+            # check which value performs best (lowest ATE)
+            damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to(device="cuda", dtype=torch.float).contiguous()
+
+            # dense bundle adjustment
+            self.video.ba(target, weight, damping, ii, jj, t0, t1, 
+                itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
+        
+            # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
+            # if self.upsample:
+            #     self.video.upsample(torch.unique(self.ii), upmask)
+
+        self.age += 1

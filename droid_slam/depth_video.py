@@ -10,7 +10,10 @@ from droid_net import cvx_upsample
 import geom.projective_ops as pops
 
 class DepthVideo:
-    def __init__(self, image_size=[480, 640], buffer=1024, stereo=False, device="cuda:0"):
+    def __init__(self, image_size=[480, 640], buffer=400, stereo=False, device="cuda:0"):
+        buffer = 400
+        print('DepthVideo __init__: buffer', buffer)
+        print('DepthVideo __init__: image_size', image_size)
 
         # CoTracker for the Video
         # self.cotracker = CoTrackerOnlineModel() ### TODO: do initializing here
@@ -27,8 +30,8 @@ class DepthVideo:
         self.dirty = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.red = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.poses = torch.zeros(buffer, 7, device="cuda", dtype=torch.float).share_memory_()
-        self.disps = torch.ones(buffer, ht//8, wd//8, device="cuda", dtype=torch.float).share_memory_()
-        self.disps_sens = torch.zeros(buffer, ht//8, wd//8, device="cuda", dtype=torch.float).share_memory_()
+        self.disps = torch.ones(buffer, ht//4, wd//4, device="cuda", dtype=torch.float).share_memory_()
+        self.disps_sens = torch.zeros(buffer, ht//4, wd//4, device="cuda", dtype=torch.float).share_memory_()
         self.disps_up = torch.zeros(buffer, ht, wd, device="cuda", dtype=torch.float).share_memory_()
         self.intrinsics = torch.zeros(buffer, 4, device="cuda", dtype=torch.float).share_memory_()
 
@@ -202,6 +205,21 @@ class DepthVideo:
             # [t0, t1] window of bundle adjustment optimization
             if t1 is None:
                 t1 = max(ii.max().item(), jj.max().item()) + 1
+
+
+
+            # Check the shapes of the tensors
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print("POSES shape:", self.poses.shape)
+            print("Depths shape:", self.disps.shape)
+            print("Depths sens shape:", self.disps_sens.shape)
+            print("Intrinsics[0]:", self.intrinsics[0])
+            print("Target shape: ", target.shape)
+            print("Weight shape: ", weight.shape)
+            print("Damping shape: ", eta.shape)
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+
 
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)

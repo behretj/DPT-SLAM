@@ -19,7 +19,7 @@ import torch.nn.functional as F
 
 transform = transforms.Compose([transforms.ToTensor()])
 
-def image_stream(datapath=None, image_size=[384, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False, add_new_img=False):
+def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False, add_new_img=False):
     """ image generator """
 
     # read all png images in folder
@@ -42,7 +42,15 @@ def image_stream(datapath=None, image_size=[384, 512], intrinsics_vec=[320.0, 32
             images += [ cv2.resize(cv2.imread(images_right[t]), (image_size[1], image_size[0])) ]
 
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
-        intrinsics = .8 * torch.as_tensor(intrinsics_vec)
+        
+        # TODO: changed intrinsics of camera depending on image size
+        # INPUT size TartanAir 480x640
+        # Processing size 384x512 DROID, 512x512 DOT
+        intrinsics = torch.as_tensor(intrinsics_vec)
+        intrinsics[0] *= image_size[1] / 640.0
+        intrinsics[1] *= image_size[0] / 480.0
+        intrinsics[2] *= image_size[1] / 640.0
+        intrinsics[3] *= image_size[0] / 480.0
 
         if add_new_img:
             data.append((t, images, intrinsics, image_dot))
@@ -57,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument("--datapath", default="datasets/TartanAir")
     parser.add_argument("--weights", default="droid.pth")
     parser.add_argument("--buffer", type=int, default=1000)
-    parser.add_argument("--image_size", default=[384,512])
+    parser.add_argument("--image_size", default=[512,512])
     parser.add_argument("--stereo", action="store_true")
     parser.add_argument("--disable_vis", action="store_true")
     parser.add_argument("--plot_curve", action="store_true")
