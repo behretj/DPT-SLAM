@@ -183,7 +183,7 @@ class DroidNet(nn.Module):
         corr_fn = CorrBlock(fmaps[:,ii], fmaps[:,jj], num_levels=4, radius=3)
 
         ht, wd = images.shape[-2:]
-        coords0 = pops.coords_grid(ht//8, wd//8, device=images.device)
+        coords0 = pops.coords_grid(ht//4, wd//4, device=images.device)
         
         coords1, _ = pops.projective_transform(Gs, disps, intrinsics, ii, jj)
         target = coords1.clone()
