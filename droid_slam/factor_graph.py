@@ -253,8 +253,6 @@ class FactorGraph:
             self.video.fmaps[ix] = self.video.fmaps[ix+1]
 
         m = (self.ii_inac == ix) | (self.jj_inac == ix)
-        self.ii_inac[self.ii_inac > ix] -= 1
-        self.jj_inac[self.jj_inac > ix] -= 1
 
         if torch.any(m):
 
@@ -276,14 +274,6 @@ class FactorGraph:
 
         print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
         print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
-
-
-
-        self.ii[self.ii > ix] -= 1
-        self.jj[self.jj > ix] -= 1
-
-
-
         #print("M mask called in rm keyframe then passed to rm factors:", m)
         print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
         print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
@@ -291,9 +281,13 @@ class FactorGraph:
         print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
 
 
-
-
         self.rm_factors(m, store=False)
+
+        self.ii_inac[self.ii_inac > ix] -= 1
+        self.jj_inac[self.jj_inac > ix] -= 1
+        
+        self.ii[self.ii > ix] -= 1
+        self.jj[self.jj > ix] -= 1
 
         # update graph_tstamp removing frame ix
         self.video.graph_tstamp_index -= 1

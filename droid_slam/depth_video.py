@@ -26,6 +26,10 @@ class DepthVideo:
 
         ### state attributes ###
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
+
+        self.graph_tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
+        self.graph_tstamp_index = 0
+
         self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
         self.dirty = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.red = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
@@ -64,6 +68,13 @@ class DepthVideo:
 
         # self.dirty[index] = True
         self.tstamp[index] = item[0]
+
+        self.graph_tstamp[self.graph_tstamp_index] = item[0]
+        self.graph_tstamp_index += 1
+
+        print("TSTAMP:       ", self.tstamp[:index+1])
+        print("GRAPH TSTAMP: ", self.graph_tstamp)
+
         self.images[index] = item[1]
         # print(f'adding image {index}')
         # print('self.counter.value', self.counter.value)
@@ -216,7 +227,7 @@ class DepthVideo:
             # print("Target shape: ", target.shape)
             # print("Weight shape: ", weight.shape)
             # print("Damping shape: ", eta.shape)
-            itrs = 16
+            itrs = 8
 
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)

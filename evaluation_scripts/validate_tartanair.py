@@ -118,9 +118,9 @@ if __name__ == '__main__':
 
 
 
-            # run on long TratanAir dataset but only up to frame 100
-            if (tstamp > 100):
-                break
+            # # run on long TratanAir dataset but only up to frame 100
+            # if (tstamp > 100):
+            #     break
 
 
 
