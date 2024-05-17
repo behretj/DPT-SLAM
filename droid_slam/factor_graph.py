@@ -493,12 +493,15 @@ class FactorGraph:
                 if use_inactive:
                     if idx < num_inac:
                         flow = self.optical_flow_refiner.refined_flow_inac[i][j]
+                        flow = flow + self.coords0
                         w = self.optical_flow_refiner.refined_weight_inac[i][j]
                     else:
                         flow = self.optical_flow_refiner.refined_flow[i][j]
+                        flow = flow + self.coords0
                         w = self.optical_flow_refiner.refined_weight[i][j]
                 else:
                     flow = self.optical_flow_refiner.refined_flow[i][j]
+                    flow = flow + self.coords0
                     w = self.optical_flow_refiner.refined_weight[i][j]
 
                 target.append(flow)
