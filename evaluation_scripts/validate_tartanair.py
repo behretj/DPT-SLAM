@@ -111,7 +111,41 @@ if __name__ == '__main__':
 
 
         for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
+
+
+
+
+
+
+
+            # run on long TratanAir dataset but only up to frame 100
+            if (tstamp > 100):
+                break
+
+
+
+
+
+
+
             droid.track(tstamp, image, intrinsics=intrinsics, image_dot=image_dot)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         # fill in non-keyframe poses + global BA
         traj_est = droid.terminate(image_stream(scenedir))

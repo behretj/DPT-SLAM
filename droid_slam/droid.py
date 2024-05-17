@@ -84,6 +84,18 @@ class Droid:
         # print("#" * 32)
         # self.backend(12)
 
+        import json
+        #print("___________________________________________________________")
+        #print("Poses before traj filler: ", self.video.poses, flush=True)
+        # Convert tensor to list
+        poses_list = self.video.poses.tolist()
+
+        # Save list to a file
+        with open('poses.json', 'w') as f:
+            print("saving poses")
+            json.dump(poses_list, f)
+        #print("___________________________________________________________")
+
         camera_trajectory = self.traj_filler(stream)
         return camera_trajectory.inv().data.cpu().numpy()
 
