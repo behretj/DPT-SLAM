@@ -105,6 +105,14 @@ class FactorGraph:
         ii, jj = self.__filter_repeated_edges(ii, jj)
 
 
+
+        print("Edges to add filtered: ")
+        print("II", ii.tolist())
+        print("JJ", jj.tolist())
+        print("_______________________________________________________")
+
+
+
         if ii.shape[0] == 0:
             return
 
@@ -140,7 +148,7 @@ class FactorGraph:
             track = self.video.cotracker_track
             print('add_factor: self.video.cotracker_track.shape', track.shape)
             
-            tstamps_list = (self.video.tstamp).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
@@ -153,8 +161,22 @@ class FactorGraph:
 
             target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
 
+
+
+
+        print("****************************************************************")
+        print("self.ii frames: ", self.ii.tolist())
+        print("self.jj frames: ", self.jj.tolist())
+        print("ii frames: ", ii.tolist())
+        print("jj frames: ", jj.tolist())
+        print("****************************************************************")
+
+
+
+
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
+        
         self.age = torch.cat([self.age, torch.zeros_like(ii)], 0)
 
         # reprojection factors
@@ -170,12 +192,22 @@ class FactorGraph:
     def rm_factors(self, mask, store=False):
         """ drop edges from factor graph """
 
-        tstamps_list = (self.video.tstamp).tolist()
+        tstamps_list = (self.video.graph_tstamp).tolist()
+        print("GRAPH_TSTAMPS LIST IN RM_FACTORS: ", tstamps_list)
         ii_list = (self.ii[mask]).tolist()
         jj_list = (self.jj[mask]).tolist()
 
+        print("ii list       :", self.ii.tolist())
+        print("ii list masked:", self.ii[mask].tolist())
+        print("jj list       :", self.jj.tolist())
+        print("jj list masked:", self.jj[mask].tolist())
+        
+
         sources_list = [int(tstamps_list[i]) for i in ii_list]
         targets_list = [int(tstamps_list[i]) for i in jj_list]
+
+        print("SOURCES LIST: ", sources_list)
+        print("TARGETS LIST: ", targets_list)
 
         # store estimated factors
         if store:
@@ -221,29 +253,52 @@ class FactorGraph:
             self.video.fmaps[ix] = self.video.fmaps[ix+1]
 
         m = (self.ii_inac == ix) | (self.jj_inac == ix)
-        self.ii_inac[self.ii_inac >= ix] -= 1
-        self.jj_inac[self.jj_inac >= ix] -= 1
+        self.ii_inac[self.ii_inac > ix] -= 1
+        self.jj_inac[self.jj_inac > ix] -= 1
 
         if torch.any(m):
-            self.ii_inac = self.ii_inac[~m]
-            self.jj_inac = self.jj_inac[~m]
 
-            tstamps_list = (self.video.tstamp).tolist()
-            ii_list = (self.ii[m]).tolist()
-            jj_list = (self.jj[m]).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
+            ii_list = (self.ii_inac[m]).tolist()
+            jj_list = (self.jj_inac[m]).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
             self.optical_flow_refiner.reset_inac(sources_list, targets_list)
+
+            self.ii_inac = self.ii_inac[~m]
+            self.jj_inac = self.jj_inac[~m]
 
             # self.target_inac = self.target_inac[:,~m]
             # self.weight_inac = self.weight_inac[:,~m]
 
         m = (self.ii == ix) | (self.jj == ix)
 
-        self.ii[self.ii >= ix] -= 1
-        self.jj[self.jj >= ix] -= 1
+        print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+
+
+
+        self.ii[self.ii > ix] -= 1
+        self.jj[self.jj > ix] -= 1
+
+
+
+        #print("M mask called in rm keyframe then passed to rm factors:", m)
+        print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+        print("ii values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+        print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+
+
+
+
         self.rm_factors(m, store=False)
+
+        # update graph_tstamp removing frame ix
+        self.video.graph_tstamp_index -= 1
+        self.video.graph_tstamp[ix:-1] = self.video.graph_tstamp[ix+1:].clone()
+        self.video.graph_tstamp[-1] = 0.0
 
 
     # @torch.cuda.amp.autocast(enabled=True)
@@ -475,7 +530,7 @@ class FactorGraph:
             # target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
             # weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
 
-            tstamps_list = (self.video.tstamp).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
@@ -485,7 +540,7 @@ class FactorGraph:
             # Iterate over the ii and jj lists
             l = len(sources_list)
             target, weight = [], []
-            flow_list = []
+            #flow_list = []
             for idx in range(l):
                 i = sources_list[idx]
                 j = targets_list[idx]
@@ -493,17 +548,17 @@ class FactorGraph:
                 if use_inactive:
                     if idx < num_inac:
                         flow = self.optical_flow_refiner.refined_flow_inac[i][j]
-                        flow_list.append(flow)
+                        #flow_list.append(flow)
                         flow = self.coords0 + flow
                         w = self.optical_flow_refiner.refined_weight_inac[i][j]
                     else:
                         flow = self.optical_flow_refiner.refined_flow[i][j]
-                        flow_list.append(flow)
+                        #flow_list.append(flow)
                         flow = self.coords0 + flow
                         w = self.optical_flow_refiner.refined_weight[i][j]
                 else:
                     flow = self.optical_flow_refiner.refined_flow[i][j]
-                    flow_list.append(flow)
+                    #flow_list.append(flow)
                     flow = self.coords0 + flow
                     w = self.optical_flow_refiner.refined_weight[i][j]
 
@@ -513,12 +568,12 @@ class FactorGraph:
             # Convert the lists to PyTorch tensors and add the necessary dimensions
             target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
             weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
-            flow = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
+            #flow = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
 
 
             target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
             weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
-            flow = flow.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            #flow = flow.squeeze(0).permute(0, 3, 1, 2).contiguous()
 
             # Input fixed damping values (eta)
             # check which value performs best (lowest ATE)
@@ -535,22 +590,22 @@ class FactorGraph:
 
 
 
-            target[:, 0, :, :] *= 64/128
-            target[:, 1, :, :] *= 48/128
-            flow[:, 0, :, :] *= 64/128
-            flow[:, 1, :, :] *= 48/128
+            # target[:, 0, :, :] *= 64/128
+            # target[:, 1, :, :] *= 48/128
+            # flow[:, 0, :, :] *= 64/128
+            # flow[:, 1, :, :] *= 48/128
 
-            print("Tstamps list: ", self.video.tstamp.tolist()[:self.video.counter.value])
-            print("Last keyframe added: ", self.video.tstamp.tolist()[self.video.counter.value-1])
-            print("New pose:", self.video.poses[max(ii.max().item(), jj.max().item())].tolist())
-            print("target_magnitude_mean shape: ", torch.mean(torch.norm(target, dim=1), dim=[1, 2]).shape)
-            target_mag_mean = torch.mean(torch.norm(target, dim=1), dim=[1, 2])
-            flow_mag_mean = torch.mean(torch.norm(flow, dim=1), dim=[1, 2])
-            # delta = delta.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
-            # delta_mag_mean = torch.mean(torch.norm(delta.to(dtype=torch.float), dim=1), dim=[1,2])
-            for idx in range(len(target_mag_mean)):
-                print(f"Pair (ii, jj):({self.video.tstamp.tolist()[ii.tolist()[idx]]}, {self.video.tstamp.tolist()[jj.tolist()[idx]]}) target mag: {target_mag_mean[idx]}, flow mag: {flow_mag_mean[idx]}")
-            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            # print("Tstamps list: ", self.video.tstamp.tolist()[:self.video.counter.value])
+            # print("Last keyframe added: ", self.video.tstamp.tolist()[self.video.counter.value-1])
+            # print("New pose:", self.video.poses[max(ii.max().item(), jj.max().item())].tolist())
+            # print("target_magnitude_mean shape: ", torch.mean(torch.norm(target, dim=1), dim=[1, 2]).shape)
+            # target_mag_mean = torch.mean(torch.norm(target, dim=1), dim=[1, 2])
+            # flow_mag_mean = torch.mean(torch.norm(flow, dim=1), dim=[1, 2])
+            # # delta = delta.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+            # # delta_mag_mean = torch.mean(torch.norm(delta.to(dtype=torch.float), dim=1), dim=[1,2])
+            # for idx in range(len(target_mag_mean)):
+            #     print(f"Pair (ii, jj):({self.video.tstamp.tolist()[ii.tolist()[idx]]}, {self.video.tstamp.tolist()[jj.tolist()[idx]]}) target mag: {target_mag_mean[idx]}, flow mag: {flow_mag_mean[idx]}")
+            # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         
             # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
             # if self.upsample:
