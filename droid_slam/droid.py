@@ -12,6 +12,8 @@ from trajectory_filler import PoseTrajectoryFiller
 from collections import OrderedDict
 from torch.multiprocessing import Process
 
+import json
+
 
 class Droid:
     def __init__(self, args):
@@ -76,14 +78,25 @@ class Droid:
 
         del self.frontend
 
-        torch.cuda.empty_cache()
-        print("#" * 32)
-        self.backend(7)
+        # torch.cuda.empty_cache()
+        # print("#" * 32)
+        # self.backend(7)
 
-        torch.cuda.empty_cache()
-        print("#" * 32)
-        self.backend(12)
+        # torch.cuda.empty_cache()
+        # print("#" * 32)
+        # self.backend(12)
+
+        #print("_")
+        #print("Poses before traj filler: ", self.video.poses, flush=True)
+        # Convert tensor to list
+        poses_list = self.video.poses.tolist()
+
+        # Save list to a file
+        with open('poses.json', 'w') as f:
+            print("saving poses")
+            json.dump(poses_list, f)
 
         camera_trajectory = self.traj_filler(stream)
+
         return camera_trajectory.inv().data.cpu().numpy()
 

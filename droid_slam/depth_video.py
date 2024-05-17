@@ -220,7 +220,7 @@ class DepthVideo:
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 
-
+            itrs = 2
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)
 

@@ -93,6 +93,8 @@ class FactorGraph:
 
     @torch.cuda.amp.autocast(enabled=True)
     def add_factors(self, ii, jj, remove=False):
+        # if len(self.video.cotracker_track[0]) > 32:
+        #     self.optical_flow_refiner.get_flow_magnitude(self.video.cotracker_track, self.video.image_dot, self.coords0)
         """ add edges to factor graph """
 
         if not isinstance(ii, torch.Tensor):
@@ -152,6 +154,7 @@ class FactorGraph:
             video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
             target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
+            torch.cuda.empty_cache()
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
@@ -278,8 +281,8 @@ class FactorGraph:
                 m = (self.ii_inac >= t0 - 3) & (self.jj_inac >= t0 - 3)
                 ii = torch.cat([self.ii_inac[m], self.ii], 0)
                 jj = torch.cat([self.jj_inac[m], self.jj], 0)
-                target = torch.cat([self.target_inac[:,m], self.target], 1)
-                weight = torch.cat([self.weight_inac[:,m], self.weight], 1)
+                target = torch.cat([self.target[:,m], self.target], 1)
+                weight = torch.cat([self.weight[:,m], self.weight], 1)
 
             else:
                 ii, jj, target, weight = self.ii, self.jj, self.target, self.weight
@@ -492,13 +495,21 @@ class FactorGraph:
                 # Get the flow and weight from the dictionaries
                 if use_inactive:
                     if idx < num_inac:
-                        flow = self.optical_flow_refiner.refined_flow_inac[i][j]
-                        w = self.optical_flow_refiner.refined_weight_inac[i][j]
-                    else:
                         flow = self.optical_flow_refiner.refined_flow[i][j]
+                        flow += self.coords0
                         w = self.optical_flow_refiner.refined_weight[i][j]
+                    else:
+                        if j in self.optical_flow_refiner.refined_flow[i]:
+                            flow = self.optical_flow_refiner.refined_flow[i][j]
+                            flow += self.coords0
+                            w = self.optical_flow_refiner.refined_weight[i][j]
+                        else:
+                            flow = self.optical_flow_refiner.refined_flow[i][j]
+                            flow += self.coords0
+                            w = self.optical_flow_refiner.refined_weight[i][j]
                 else:
                     flow = self.optical_flow_refiner.refined_flow[i][j]
+                    flow += self.coords0
                     w = self.optical_flow_refiner.refined_weight[i][j]
 
                 target.append(flow)

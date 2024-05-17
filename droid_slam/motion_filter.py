@@ -14,6 +14,11 @@ from thirdparty.DOT.dot.models.point_tracking import PointTracker
 from thirdparty.DOT.dot.models.interpolation import interpolate
 from thirdparty.DOT.dot.utils.torch import get_grid
 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+from matplotlib import colormaps
+from tqdm import tqdm
 
 class MotionFilter:
     """ This class is used to filter incoming frames and extract features """
@@ -78,13 +83,16 @@ class MotionFilter:
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.target_batch_size<=tstamp:
                 # TODO: Do the tracks get divided every iteration making them super small?
-                self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1)
+                self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1).to('cpu')
                 # all the images have been registered in CoTracker, we can add them to Droid now:
                 for args in self.droid_buffer:
                     self.track(*args)
                     # TODO: think about this (probably bad practice!)
                     frontend()
                 self.droid_buffer.clear()
+
+                if len(self.video.cotracker_track[0]) == 380:
+                    self.plot_traj_video()
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
@@ -106,7 +114,7 @@ class MotionFilter:
         if self.video.counter.value == 0:
             net, inp = self.__context_encoder(inputs[:,[0]])
             self.net, self.inp, self.fmap = net, inp, gmap
-            self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 8.0, gmap, net[0,0], inp[0,0], image_dot)
+            self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 4.0, gmap, net[0,0], inp[0,0], image_dot)
             self.last_tstamp = tstamp
 
         ### only add new frame if there is enough motion ###
@@ -120,8 +128,8 @@ class MotionFilter:
             
             
             ### "Doing approximate flow estimation, replacing the above line:
-            src_points = self.video.cotracker_track[:, self.last_tstamp]
-            tgt_points = self.video.cotracker_track[:, tstamp]
+            src_points = self.video.cotracker_track[:, self.last_tstamp].to('cuda')
+            tgt_points = self.video.cotracker_track[:, tstamp].to('cuda')
             grid = get_grid(128, 128).to("cuda")
 
             est_flow, _ = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
@@ -131,13 +139,46 @@ class MotionFilter:
                 self.count = 0
                 net, inp = self.__context_encoder(inputs[:,[0]])
                 self.net, self.inp, self.fmap = net, inp, gmap
-                self.video.append(tstamp, image[0], None, None, depth, intrinsics / 8.0, gmap, net[0], inp[0], image_dot)
+                self.video.append(tstamp, image[0], None, None, depth, intrinsics / 4.0, gmap, net[0], inp[0], image_dot)
                 self.last_tstamp = tstamp
             else:
                 self.video.append(image_dot)
                 self.count += 1
 
+    def get_rainbow_colors(self, size):
+        col_map = colormaps["jet"]
+        col_range = np.array(range(size)) / (size - 1)
+        col = torch.from_numpy(col_map(col_range)[..., :3]).float()
+        col = col.view(-1, 3)
+        return col
 
+
+    def plot_traj_video(self):
+        return
+        print('============ generating traj video ===============')
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter('./traj_video.avi', fourcc, 10.0, (512, 512))
+        # colors = cm.rainbow(np.linspace(0, 1, len(self.video.cotracker_track[0][-1]))) 
+        colors = (self.get_rainbow_colors(64).numpy() * 255).astype('uint8')
+        for idx in tqdm(range(len(self.video.cotracker_track[0])), 'visualizing track...'):
+            image = cv2.UMat((self.video.image_dot[idx].squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8'))
+            points = self.video.cotracker_track[0, idx, :, :2]
+            print('points.shape:', points.shape)
+            # print('cotracker points:', points)
+            for p_i in range(len(points)):
+                # color = plt.cm.tab10(p_i)[:-1]
+                color = colors[p_i % 64]
+                coord = points[p_i].cpu().numpy() * 512
+                # print(f'writing point {coord} to image {idx} with color {tuple(colors[p_i % 64])}')
+                if coord[0] == 0 and coord[1] == 0:
+                    continue
+                if coord[0] < 1 or coord[0] > 511 or coord[1] < 1 or coord[1] > 511:
+                    continue
+                cv2.circle(image, (int(coord[0]), int(coord[1])), 4, (int(color[0]), int(color[1]), int(color[2])), -1)
+            out.write(image)
+        out.release()
+        print('video saved')
+        # assert False
 
 
 # class MotionFilter:
@@ -212,4 +253,3 @@ class MotionFilter:
 
 #             else:
 #                 self.count += 1
-

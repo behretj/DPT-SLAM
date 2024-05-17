@@ -62,14 +62,14 @@ class PoseTrajectoryFiller:
         fmap = self.__feature_encoder(inputs)
 
         self.video.counter.value += M
-        self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 8.0, fmap)
+        self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 4.0, fmap)
 
         graph = FactorGraph(self.video, self.update)
         graph.add_factors(t0.cuda(), torch.arange(N, N+M).cuda())
         graph.add_factors(t1.cuda(), torch.arange(N, N+M).cuda())
 
         for itr in range(6):
-            graph.update(N, N+M, motion_only=True)
+            graph.update_DOT_SLAM(N, N+M, motion_only=True)
     
         Gs = SE3(self.video.poses[N:N+M].clone())
         self.video.counter.value -= M
