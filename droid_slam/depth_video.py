@@ -27,7 +27,7 @@ class DepthVideo:
         ### state attributes ###
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
 
-        self.graph_tstamp = torch.zeros(buffer, device="cpu", dtype=torch.float).share_memory_()
+        self.graph_tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
         self.graph_tstamp_index = 0
 
         self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
@@ -69,11 +69,15 @@ class DepthVideo:
         # self.dirty[index] = True
         self.tstamp[index] = item[0]
 
-        self.graph_tstamp[self.graph_tstamp_index] = item[0]
+        self.graph_tstamp[index] = item[0]
+
+        # print("current       tstamp index: ", index)
+        # print("current graph tstamp index: ",self.graph_tstamp_index)
+
         self.graph_tstamp_index += 1
 
-        print("TSTAMP:       ", self.tstamp[:index+1])
-        print("GRAPH TSTAMP: ", self.graph_tstamp)
+        print("TSTAMP:       ", self.tstamp, flush=True)
+        print("GRAPH TSTAMP: ", self.graph_tstamp, flush=True)
 
         self.images[index] = item[1]
         # print(f'adding image {index}')

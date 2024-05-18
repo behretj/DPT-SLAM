@@ -275,13 +275,13 @@ class FactorGraph:
 
         m = (self.ii == ix) | (self.jj == ix)
 
-        print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
-        print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
-        #print("M mask called in rm keyframe then passed to rm factors:", m)
-        print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
-        print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
-        print("ii values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
-        print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+        # print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        # print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+        # #print("M mask called in rm keyframe then passed to rm factors:", m)
+        # print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        # print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+        # print("ii values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+        # print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
 
 
         self.rm_factors(m, store=False)
@@ -293,9 +293,10 @@ class FactorGraph:
         self.jj[self.jj > ix] -= 1
 
         # update graph_tstamp removing frame ix
-        self.video.graph_tstamp_index -= 1
-        self.video.graph_tstamp[ix:-1] = self.video.graph_tstamp[ix+1:].clone()
-        self.video.graph_tstamp[-1] = 0.0
+        with self.video.get_lock():
+            self.video.graph_tstamp_index -= 1
+            self.video.graph_tstamp[ix:-1] = self.video.graph_tstamp[ix+1:].clone()
+            self.video.graph_tstamp[-1] = 0.0
 
 
     # @torch.cuda.amp.autocast(enabled=True)
