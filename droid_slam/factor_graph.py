@@ -93,8 +93,6 @@ class FactorGraph:
 
     @torch.cuda.amp.autocast(enabled=True)
     def add_factors(self, ii, jj, remove=False):
-        # if len(self.video.cotracker_track[0]) > 32:
-        #     self.optical_flow_refiner.get_flow_magnitude(self.video.cotracker_track, self.video.image_dot, self.coords0)
         """ add edges to factor graph """
 
         if not isinstance(ii, torch.Tensor):
@@ -105,6 +103,14 @@ class FactorGraph:
 
         # remove duplicate edges
         ii, jj = self.__filter_repeated_edges(ii, jj)
+
+
+
+        print("Edges to add filtered: ")
+        print("II", ii.tolist())
+        print("JJ", jj.tolist())
+        print("_______________________________________________________")
+
 
 
         if ii.shape[0] == 0:
@@ -142,7 +148,7 @@ class FactorGraph:
             track = self.video.cotracker_track
             print('add_factor: self.video.cotracker_track.shape', track.shape)
             
-            tstamps_list = (self.video.tstamp).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
@@ -153,11 +159,25 @@ class FactorGraph:
             # track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
             video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
-            target, weight = self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
+            self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
             torch.cuda.empty_cache()
+
+
+
+
+        print("****************************************************************")
+        print("self.ii frames: ", self.ii.tolist())
+        print("self.jj frames: ", self.jj.tolist())
+        print("ii frames: ", ii.tolist())
+        print("jj frames: ", jj.tolist())
+        print("****************************************************************")
+
+
+
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
+        
         self.age = torch.cat([self.age, torch.zeros_like(ii)], 0)
 
         # reprojection factors
@@ -173,12 +193,22 @@ class FactorGraph:
     def rm_factors(self, mask, store=False):
         """ drop edges from factor graph """
 
-        tstamps_list = (self.video.tstamp).tolist()
+        tstamps_list = (self.video.graph_tstamp).tolist()
+        print("GRAPH_TSTAMPS LIST IN RM_FACTORS: ", tstamps_list)
         ii_list = (self.ii[mask]).tolist()
         jj_list = (self.jj[mask]).tolist()
 
+        print("ii list       :", self.ii.tolist())
+        print("ii list masked:", self.ii[mask].tolist())
+        print("jj list       :", self.jj.tolist())
+        print("jj list masked:", self.jj[mask].tolist())
+        
+
         sources_list = [int(tstamps_list[i]) for i in ii_list]
         targets_list = [int(tstamps_list[i]) for i in jj_list]
+
+        print("SOURCES LIST: ", sources_list)
+        print("TARGETS LIST: ", targets_list)
 
         # store estimated factors
         if store:
@@ -205,13 +235,14 @@ class FactorGraph:
         # self.target = self.target[:,~mask]
         # self.weight = self.weight[:,~mask]
 
+        torch.cuda.empty_cache()
+
 
 
 
     @torch.cuda.amp.autocast(enabled=True)
     def rm_keyframe(self, ix):
         """ drop edges from factor graph """
-
 
         with self.video.get_lock():
             self.video.images[ix] = self.video.images[ix+1]
@@ -225,132 +256,149 @@ class FactorGraph:
             self.video.fmaps[ix] = self.video.fmaps[ix+1]
 
         m = (self.ii_inac == ix) | (self.jj_inac == ix)
-        self.ii_inac[self.ii_inac >= ix] -= 1
-        self.jj_inac[self.jj_inac >= ix] -= 1
 
         if torch.any(m):
-            self.ii_inac = self.ii_inac[~m]
-            self.jj_inac = self.jj_inac[~m]
 
-            tstamps_list = (self.video.tstamp).tolist()
-            ii_list = (self.ii[m]).tolist()
-            jj_list = (self.jj[m]).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
+            ii_list = (self.ii_inac[m]).tolist()
+            jj_list = (self.jj_inac[m]).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
             self.optical_flow_refiner.reset_inac(sources_list, targets_list)
+
+            self.ii_inac = self.ii_inac[~m]
+            self.jj_inac = self.jj_inac[~m]
 
             # self.target_inac = self.target_inac[:,~m]
             # self.weight_inac = self.weight_inac[:,~m]
 
         m = (self.ii == ix) | (self.jj == ix)
 
-        self.ii[self.ii >= ix] -= 1
-        self.jj[self.jj >= ix] -= 1
+        print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+        #print("M mask called in rm keyframe then passed to rm factors:", m)
+        print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
+        print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
+        print("ii values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+        print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
+
+
         self.rm_factors(m, store=False)
 
-
-    @torch.cuda.amp.autocast(enabled=True)
-    def update(self, t0=None, t1=None, itrs=2, use_inactive=False, EP=1e-7, motion_only=False):
-        """ run update operator on factor graph """
-
-        # motion features
-        with torch.cuda.amp.autocast(enabled=False):
-            coords1, mask = self.video.reproject(self.ii, self.jj)
-            ### motn = torch.cat([self.target - self.coords0, coords1 - self.target], dim=-1)
-            motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
-            motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
+        self.ii_inac[self.ii_inac > ix] -= 1
+        self.jj_inac[self.jj_inac > ix] -= 1
         
-        # correlation features
-        corr = self.corr(coords1)
+        self.ii[self.ii > ix] -= 1
+        self.jj[self.jj > ix] -= 1
 
-        self.net, delta, weight, damping, upmask = \
-            self.update_op(self.net, self.inp, corr, motn, self.ii, self.jj)
-
-        if t0 is None:
-            t0 = max(1, self.ii.min().item()+1)
-
-        with torch.cuda.amp.autocast(enabled=False):
-            self.target = coords1 + delta.to(dtype=torch.float)
-            self.weight = weight.to(dtype=torch.float)
-
-            ht, wd = self.coords0.shape[0:2]
-            self.damping[torch.unique(self.ii)] = damping
-
-            if use_inactive:
-                m = (self.ii_inac >= t0 - 3) & (self.jj_inac >= t0 - 3)
-                ii = torch.cat([self.ii_inac[m], self.ii], 0)
-                jj = torch.cat([self.jj_inac[m], self.jj], 0)
-                target = torch.cat([self.target[:,m], self.target], 1)
-                weight = torch.cat([self.weight[:,m], self.weight], 1)
-
-            else:
-                ii, jj, target, weight = self.ii, self.jj, self.target, self.weight
+        # update graph_tstamp removing frame ix
+        self.video.graph_tstamp_index -= 1
+        self.video.graph_tstamp[ix:-1] = self.video.graph_tstamp[ix+1:].clone()
+        self.video.graph_tstamp[-1] = 0.0
 
 
-            damping = .2 * self.damping[torch.unique(ii)].contiguous() + EP
+    # @torch.cuda.amp.autocast(enabled=True)
+    # def update(self, t0=None, t1=None, itrs=2, use_inactive=False, EP=1e-7, motion_only=False):
+    #     """ run update operator on factor graph """
 
-            target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
-            weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
-
-            # dense bundle adjustment
-            self.video.ba(target, weight, damping, ii, jj, t0, t1, 
-                itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
+    #     # motion features
+    #     with torch.cuda.amp.autocast(enabled=False):
+    #         coords1, mask = self.video.reproject(self.ii, self.jj)
+    #         ### motn = torch.cat([self.target - self.coords0, coords1 - self.target], dim=-1)
+    #         motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
+    #         motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
         
-            if self.upsample:
-                self.video.upsample(torch.unique(self.ii), upmask)
+    #     # correlation features
+    #     corr = self.corr(coords1)
 
-        self.age += 1
+    #     self.net, delta, weight, damping, upmask = \
+    #         self.update_op(self.net, self.inp, corr, motn, self.ii, self.jj)
+
+    #     if t0 is None:
+    #         t0 = max(1, self.ii.min().item()+1)
+
+    #     with torch.cuda.amp.autocast(enabled=False):
+    #         self.target = coords1 + delta.to(dtype=torch.float)
+    #         self.weight = weight.to(dtype=torch.float)
+
+    #         ht, wd = self.coords0.shape[0:2]
+    #         self.damping[torch.unique(self.ii)] = damping
+
+    #         if use_inactive:
+    #             m = (self.ii_inac >= t0 - 3) & (self.jj_inac >= t0 - 3)
+    #             ii = torch.cat([self.ii_inac[m], self.ii], 0)
+    #             jj = torch.cat([self.jj_inac[m], self.jj], 0)
+    #             target = torch.cat([self.target_inac[:,m], self.target], 1)
+    #             weight = torch.cat([self.weight_inac[:,m], self.weight], 1)
+
+    #         else:
+    #             ii, jj, target, weight = self.ii, self.jj, self.target, self.weight
 
 
-    @torch.cuda.amp.autocast(enabled=False)
-    def update_lowmem(self, t0=None, t1=None, itrs=2, use_inactive=False, EP=1e-7, steps=8):
-        """ run update operator on factor graph - reduced memory implementation """
+    #         damping = .2 * self.damping[torch.unique(ii)].contiguous() + EP
 
-        # alternate corr implementation
-        t = self.video.counter.value
+    #         target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+    #         weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
 
-        num, rig, ch, ht, wd = self.video.fmaps.shape
-        corr_op = AltCorrBlock(self.video.fmaps.view(1, num*rig, ch, ht, wd))
+    #         # dense bundle adjustment
+    #         self.video.ba(target, weight, damping, ii, jj, t0, t1, 
+    #             itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
+        
+    #         if self.upsample:
+    #             self.video.upsample(torch.unique(self.ii), upmask)
 
-        for step in range(steps):
-            print("Global BA Iteration #{}".format(step+1))
-            with torch.cuda.amp.autocast(enabled=False):
-                coords1, mask = self.video.reproject(self.ii, self.jj)
-                motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
-                motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
+    #     self.age += 1
 
-            s = 8
-            for i in range(0, self.jj.max()+1, s):
-                v = (self.ii >= i) & (self.ii < i + s)
-                iis = self.ii[v]
-                jjs = self.jj[v]
 
-                ht, wd = self.coords0.shape[0:2]
-                corr1 = corr_op(coords1[:,v], rig * iis, rig * jjs + (iis == jjs).long())
+    # @torch.cuda.amp.autocast(enabled=False)
+    # def update_lowmem(self, t0=None, t1=None, itrs=2, use_inactive=False, EP=1e-7, steps=8):
+    #     """ run update operator on factor graph - reduced memory implementation """
 
-                with torch.cuda.amp.autocast(enabled=True):
+    #     # alternate corr implementation
+    #     t = self.video.counter.value
+
+    #     num, rig, ch, ht, wd = self.video.fmaps.shape
+    #     corr_op = AltCorrBlock(self.video.fmaps.view(1, num*rig, ch, ht, wd))
+
+    #     for step in range(steps):
+    #         print("Global BA Iteration #{}".format(step+1))
+    #         with torch.cuda.amp.autocast(enabled=False):
+    #             coords1, mask = self.video.reproject(self.ii, self.jj)
+    #             motn = torch.cat([coords1 - self.coords0, self.target - coords1], dim=-1)
+    #             motn = motn.permute(0,1,4,2,3).clamp(-64.0, 64.0)
+
+    #         s = 8
+    #         for i in range(0, self.jj.max()+1, s):
+    #             v = (self.ii >= i) & (self.ii < i + s)
+    #             iis = self.ii[v]
+    #             jjs = self.jj[v]
+
+    #             ht, wd = self.coords0.shape[0:2]
+    #             corr1 = corr_op(coords1[:,v], rig * iis, rig * jjs + (iis == jjs).long())
+
+    #             with torch.cuda.amp.autocast(enabled=True):
                  
-                    net, delta, weight, damping, upmask = \
-                        self.update_op(self.net[:,v], self.video.inps[None,iis], corr1, motn[:,v], iis, jjs)
+    #                 net, delta, weight, damping, upmask = \
+    #                     self.update_op(self.net[:,v], self.video.inps[None,iis], corr1, motn[:,v], iis, jjs)
 
-                    if self.upsample:
-                        self.video.upsample(torch.unique(iis), upmask)
+    #                 if self.upsample:
+    #                     self.video.upsample(torch.unique(iis), upmask)
 
-                self.net[:,v] = net
-                self.target[:,v] = coords1[:,v] + delta.float()
-                self.weight[:,v] = weight.float()
-                self.damping[torch.unique(iis)] = damping
+    #             self.net[:,v] = net
+    #             self.target[:,v] = coords1[:,v] + delta.float()
+    #             self.weight[:,v] = weight.float()
+    #             self.damping[torch.unique(iis)] = damping
 
-            damping = .2 * self.damping[torch.unique(self.ii)].contiguous() + EP
-            target = self.target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
-            weight = self.weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+    #         damping = .2 * self.damping[torch.unique(self.ii)].contiguous() + EP
+    #         target = self.target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+    #         weight = self.weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
 
-            # dense bundle adjustment
-            self.video.ba(target, weight, damping, self.ii, self.jj, 1, t, 
-                itrs=itrs, lm=1e-5, ep=1e-2, motion_only=False)
+    #         # dense bundle adjustment
+    #         self.video.ba(target, weight, damping, self.ii, self.jj, 1, t, 
+    #             itrs=itrs, lm=1e-5, ep=1e-2, motion_only=False)
 
-            self.video.dirty[:t] = True
+    #         self.video.dirty[:t] = True
 
     def add_neighborhood_factors(self, t0, t1, r=3):
         """ add edges between neighboring frames within radius r """
@@ -479,7 +527,7 @@ class FactorGraph:
             # target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
             # weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
 
-            tstamps_list = (self.video.tstamp).tolist()
+            tstamps_list = (self.video.graph_tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
@@ -489,28 +537,27 @@ class FactorGraph:
             # Iterate over the ii and jj lists
             l = len(sources_list)
             target, weight = [], []
+            #flow_list = []
             for idx in range(l):
                 i = sources_list[idx]
                 j = targets_list[idx]
                 # Get the flow and weight from the dictionaries
                 if use_inactive:
                     if idx < num_inac:
-                        flow = self.optical_flow_refiner.refined_flow[i][j]
-                        flow += self.coords0
-                        w = self.optical_flow_refiner.refined_weight[i][j]
+                        flow = self.optical_flow_refiner.refined_flow_inac[i][j].to('cuda')
+                        #flow_list.append(flow)
+                        flow = self.coords0 + flow
+                        w = self.optical_flow_refiner.refined_weight_inac[i][j].to('cuda')
                     else:
-                        if j in self.optical_flow_refiner.refined_flow[i]:
-                            flow = self.optical_flow_refiner.refined_flow[i][j]
-                            flow += self.coords0
-                            w = self.optical_flow_refiner.refined_weight[i][j]
-                        else:
-                            flow = self.optical_flow_refiner.refined_flow[i][j]
-                            flow += self.coords0
-                            w = self.optical_flow_refiner.refined_weight[i][j]
+                        flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
+                        #flow_list.append(flow)
+                        flow = self.coords0 + flow
+                        w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
                 else:
-                    flow = self.optical_flow_refiner.refined_flow[i][j]
-                    flow += self.coords0
-                    w = self.optical_flow_refiner.refined_weight[i][j]
+                    flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
+                    #flow_list.append(flow)
+                    flow = self.coords0 + flow
+                    w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
 
                 target.append(flow)
                 weight.append(w)
@@ -518,9 +565,12 @@ class FactorGraph:
             # Convert the lists to PyTorch tensors and add the necessary dimensions
             target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
             weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
+            #flow = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
+
 
             target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
             weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            #flow = flow.squeeze(0).permute(0, 3, 1, 2).contiguous()
 
             # Input fixed damping values (eta)
             # check which value performs best (lowest ATE)
@@ -529,6 +579,30 @@ class FactorGraph:
             # dense bundle adjustment
             self.video.ba(target, weight, damping, ii, jj, t0, t1, 
                 itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
+
+
+
+
+
+
+
+
+            # target[:, 0, :, :] *= 64/128
+            # target[:, 1, :, :] *= 48/128
+            # flow[:, 0, :, :] *= 64/128
+            # flow[:, 1, :, :] *= 48/128
+
+            # print("Tstamps list: ", self.video.tstamp.tolist()[:self.video.counter.value])
+            # print("Last keyframe added: ", self.video.tstamp.tolist()[self.video.counter.value-1])
+            # print("New pose:", self.video.poses[max(ii.max().item(), jj.max().item())].tolist())
+            # print("target_magnitude_mean shape: ", torch.mean(torch.norm(target, dim=1), dim=[1, 2]).shape)
+            # target_mag_mean = torch.mean(torch.norm(target, dim=1), dim=[1, 2])
+            # flow_mag_mean = torch.mean(torch.norm(flow, dim=1), dim=[1, 2])
+            # # delta = delta.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+            # # delta_mag_mean = torch.mean(torch.norm(delta.to(dtype=torch.float), dim=1), dim=[1,2])
+            # for idx in range(len(target_mag_mean)):
+            #     print(f"Pair (ii, jj):({self.video.tstamp.tolist()[ii.tolist()[idx]]}, {self.video.tstamp.tolist()[jj.tolist()[idx]]}) target mag: {target_mag_mean[idx]}, flow mag: {flow_mag_mean[idx]}")
+            # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         
             # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
             # if self.upsample:

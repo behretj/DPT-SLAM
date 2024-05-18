@@ -26,6 +26,10 @@ class DepthVideo:
 
         ### state attributes ###
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
+
+        self.graph_tstamp = torch.zeros(buffer, device="cpu", dtype=torch.float).share_memory_()
+        self.graph_tstamp_index = 0
+
         self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
         self.dirty = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.red = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
@@ -53,7 +57,7 @@ class DepthVideo:
 
     def __item_setter(self, index, item):
         if (len(item) == 1): # not key frame, only add to image_dot
-            self.image_dot.append(item[0])
+            self.image_dot.append(item[0].to('cpu'))
             # print('Adding non-keyframe')
             return
         if isinstance(index, int) and index >= self.counter.value:
@@ -64,6 +68,13 @@ class DepthVideo:
 
         # self.dirty[index] = True
         self.tstamp[index] = item[0]
+
+        self.graph_tstamp[self.graph_tstamp_index] = item[0]
+        self.graph_tstamp_index += 1
+
+        print("TSTAMP:       ", self.tstamp[:index+1])
+        print("GRAPH TSTAMP: ", self.graph_tstamp)
+
         self.images[index] = item[1]
         # print(f'adding image {index}')
         # print('self.counter.value', self.counter.value)
@@ -92,7 +103,7 @@ class DepthVideo:
             self.inps[index] = item[8]
 
         if len(item) > 9:
-            self.image_dot.append(item[9])
+            self.image_dot.append(item[9].to('cpu'))
             # print(f'Adding dot image')
 
     def __setitem__(self, index, item):
@@ -207,20 +218,17 @@ class DepthVideo:
                 t1 = max(ii.max().item(), jj.max().item()) + 1
 
 
-
             # Check the shapes of the tensors
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("POSES shape:", self.poses.shape)
-            print("Depths shape:", self.disps.shape)
-            print("Depths sens shape:", self.disps_sens.shape)
-            print("Intrinsics[0]:", self.intrinsics[0])
-            print("Target shape: ", target.shape)
-            print("Weight shape: ", weight.shape)
-            print("Damping shape: ", eta.shape)
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            # print("****************************************")
+            # print("POSES shape:", self.poses.shape)
+            # print("Depths shape:", self.disps.shape)
+            # print("Depths sens shape:", self.disps_sens.shape)
+            # print("Intrinsics[0]:", self.intrinsics[0])
+            # print("Target shape: ", target.shape)
+            # print("Weight shape: ", weight.shape)
+            # print("Damping shape: ", eta.shape)
+            itrs = 8
 
-
-            itrs = 2
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)
 

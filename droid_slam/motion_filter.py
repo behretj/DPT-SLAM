@@ -145,6 +145,8 @@ class MotionFilter:
                 self.video.append(image_dot)
                 self.count += 1
 
+        torch.cuda.empty_cache()
+
     def get_rainbow_colors(self, size):
         col_map = colormaps["jet"]
         col_range = np.array(range(size)) / (size - 1)
