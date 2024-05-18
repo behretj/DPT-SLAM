@@ -102,6 +102,7 @@ if __name__ == '__main__':
     test_split = ["P001"]
 
     ate_list = []
+    filled_traj = None
     for scene in test_split:
         print("Performing evaluation on {}".format(scene))
         torch.cuda.empty_cache()
@@ -115,6 +116,8 @@ if __name__ == '__main__':
 
         # fill in non-keyframe poses + global BA
         traj_est = droid.terminate(image_stream(scenedir))
+            
+        filled_traj = np.copy(traj_est)
 
         ### do evaluation ###
         evaluator = TartanAirEvaluator()
@@ -130,6 +133,11 @@ if __name__ == '__main__':
 
     print("Results")
     print(ate_list)
+
+    # save filled poses
+    if filled_traj is not None:
+        print("saving filled poses")
+        np.savetxt('poses_filled.txt', filled_traj)
 
     if args.plot_curve:
         import matplotlib.pyplot as plt

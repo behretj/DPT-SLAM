@@ -98,10 +98,5 @@ class Droid:
 
         camera_trajectory = self.traj_filler(stream)
 
-        # Save list to a file
-        with open('poses_filled.json', 'w') as f:
-            print("saving filled poses")
-            json.dump(camera_trajectory.tolist(), f)
-
         return camera_trajectory.inv().data.cpu().numpy()
 
