@@ -44,7 +44,7 @@ class PoseTrajectoryFiller:
         N = self.video.counter.value
         M = len(tstamps)
 
-        ts = self.video.graph_tstamp[:N]
+        ts = self.video.tstamp[:N]
         Ps = SE3(self.video.poses[:N])
 
         t0 = torch.as_tensor([ts[ts<=t].shape[0] - 1 for t in tstamps])

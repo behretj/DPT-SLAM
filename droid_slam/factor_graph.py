@@ -104,13 +104,15 @@ class FactorGraph:
         # remove duplicate edges
         ii, jj = self.__filter_repeated_edges(ii, jj)
 
+        # remove edges of same frame
+        # tstamp = self.video.tstamp[:self.video.counter.value]
+        # print("tstamp up to counter:", tstamp, flush=True)
+        # maskaaa = tstamp[ii] != tstamp[jj]
+        # new_ii = ii[maskaaa]
+        # new_jj = jj[maskaaa]
 
-
-        print("Edges to add filtered: ")
-        print("II", ii.tolist())
-        print("JJ", jj.tolist())
-        print("_______________________________________________________")
-
+        # ii = new_ii.clone()
+        # jj = new_jj.clone()
 
 
         if ii.shape[0] == 0:
@@ -146,16 +148,16 @@ class FactorGraph:
             ## using something like dot.get_flow_between_frames(from: ii, to: jj)
             # TODO AFTER MERGE
             track = self.video.cotracker_track
-            print('add_factor: self.video.cotracker_track.shape', track.shape)
+            # print('add_factor: self.video.cotracker_track.shape', track.shape)
             
-            tstamps_list = (self.video.graph_tstamp).tolist()
+            tstamps_list = (self.video.tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
-            print(f'add_factor: source_list" {sources_list}')
-            print(f'add_factor: targets_list" {targets_list}')
+            #print(f'add_factor: source_list" {sources_list}')
+            #print(f'add_factor: targets_list" {targets_list}')
             # track = torch.ones((1, 100, 64, 3)).cuda() # TODO: get track from online CoTracker
             video = self.video.image_dot # TODO, maybe reshape the video first before passing it to the refinement
 
@@ -165,15 +167,16 @@ class FactorGraph:
 
 
 
-        print("****************************************************************")
-        print("self.ii frames: ", self.ii.tolist())
-        print("self.jj frames: ", self.jj.tolist())
-        print("ii frames: ", ii.tolist())
-        print("jj frames: ", jj.tolist())
-        print("****************************************************************")
+        # print("****************************************************************")
+        # print("self.ii frames: ", self.ii.tolist())
+        # print("self.jj frames: ", self.jj.tolist())
+        # print("ii frames: ", ii.tolist())
+        # print("jj frames: ", jj.tolist())
+        # print("****************************************************************")
 
 
-
+        # print("ii to add: ", ii.tolist())
+        # print("jj to add: ", jj.tolist())
 
         self.ii = torch.cat([self.ii, ii], 0)
         self.jj = torch.cat([self.jj, jj], 0)
@@ -193,22 +196,12 @@ class FactorGraph:
     def rm_factors(self, mask, store=False):
         """ drop edges from factor graph """
 
-        tstamps_list = (self.video.graph_tstamp).tolist()
-        print("GRAPH_TSTAMPS LIST IN RM_FACTORS: ", tstamps_list)
+        tstamps_list = (self.video.tstamp).tolist()
         ii_list = (self.ii[mask]).tolist()
         jj_list = (self.jj[mask]).tolist()
 
-        print("ii list       :", self.ii.tolist())
-        print("ii list masked:", self.ii[mask].tolist())
-        print("jj list       :", self.jj.tolist())
-        print("jj list masked:", self.jj[mask].tolist())
-        
-
         sources_list = [int(tstamps_list[i]) for i in ii_list]
         targets_list = [int(tstamps_list[i]) for i in jj_list]
-
-        print("SOURCES LIST: ", sources_list)
-        print("TARGETS LIST: ", targets_list)
 
         # store estimated factors
         if store:
@@ -259,7 +252,7 @@ class FactorGraph:
 
         if torch.any(m):
 
-            tstamps_list = (self.video.graph_tstamp).tolist()
+            tstamps_list = (self.video.tstamp).tolist()
             ii_list = (self.ii_inac[m]).tolist()
             jj_list = (self.jj_inac[m]).tolist()
 
@@ -275,15 +268,6 @@ class FactorGraph:
 
         m = (self.ii == ix) | (self.jj == ix)
 
-        # print("self.ii values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
-        # print("self.jj values in remove keyframe                              : ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
-        # #print("M mask called in rm keyframe then passed to rm factors:", m)
-        # print("self.ii values in remove keyframe after subtracting 1 to ii>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii.tolist()])
-        # print("self.jj values in remove keyframe after subtracting 1 to jj>=ix: ", [self.video.graph_tstamp.tolist()[val] for val in self.jj.tolist()])
-        # print("ii values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
-        # print("jj values filtered by mask to remove: ", [self.video.graph_tstamp.tolist()[val] for val in self.ii[m].tolist()])
-
-
         self.rm_factors(m, store=False)
 
         self.ii_inac[self.ii_inac > ix] -= 1
@@ -292,11 +276,10 @@ class FactorGraph:
         self.ii[self.ii > ix] -= 1
         self.jj[self.jj > ix] -= 1
 
-        # update graph_tstamp removing frame ix
+        # update tstamp removing frame ix
         with self.video.get_lock():
-            self.video.graph_tstamp_index -= 1
-            self.video.graph_tstamp[ix:-1] = self.video.graph_tstamp[ix+1:].clone()
-            self.video.graph_tstamp[-1] = 0.0
+            self.video.tstamp[ix:-1] = self.video.tstamp[ix+1:].clone()
+            self.video.tstamp[-1] = 0.0
 
 
     # @torch.cuda.amp.autocast(enabled=True)
@@ -528,7 +511,7 @@ class FactorGraph:
             # target = target.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
             # weight = weight.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
 
-            tstamps_list = (self.video.graph_tstamp).tolist()
+            tstamps_list = (self.video.tstamp).tolist()
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
@@ -538,7 +521,7 @@ class FactorGraph:
             # Iterate over the ii and jj lists
             l = len(sources_list)
             target, weight = [], []
-            #flow_list = []
+            flow_list = []
             for idx in range(l):
                 i = sources_list[idx]
                 j = targets_list[idx]
@@ -546,17 +529,17 @@ class FactorGraph:
                 if use_inactive:
                     if idx < num_inac:
                         flow = self.optical_flow_refiner.refined_flow_inac[i][j].to('cuda')
-                        #flow_list.append(flow)
+                        flow_list.append(flow)
                         flow = self.coords0 + flow
                         w = self.optical_flow_refiner.refined_weight_inac[i][j].to('cuda')
                     else:
                         flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                        #flow_list.append(flow)
+                        flow_list.append(flow)
                         flow = self.coords0 + flow
                         w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
                 else:
                     flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                    #flow_list.append(flow)
+                    flow_list.append(flow)
                     flow = self.coords0 + flow
                     w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
 
@@ -566,20 +549,26 @@ class FactorGraph:
             # Convert the lists to PyTorch tensors and add the necessary dimensions
             target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
             weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
-            #flow = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
+            flow = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
 
 
             target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
             weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
-            #flow = flow.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            flow = flow.squeeze(0).permute(0, 3, 1, 2).contiguous()
 
             # Input fixed damping values (eta)
             # check which value performs best (lowest ATE)
-            damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to(device="cuda", dtype=torch.float).contiguous()
+            damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  0.005).to(device="cuda", dtype=torch.float).contiguous()
 
-            # dense bundle adjustment
-            self.video.ba(target, weight, damping, ii, jj, t0, t1, 
-                itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
+            calls = 6
+
+            for times in range(calls):
+                # after 2 BA calls with higher damping use lower damping for successive iterations
+                if (times == 2):
+                    damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to(device="cuda", dtype=torch.float).contiguous()
+                # dense bundle adjustment
+                self.video.ba(target, weight, damping, ii, jj, t0, t1, 
+                    itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
 
 
 
@@ -588,22 +577,22 @@ class FactorGraph:
 
 
 
-            # target[:, 0, :, :] *= 64/128
-            # target[:, 1, :, :] *= 48/128
-            # flow[:, 0, :, :] *= 64/128
-            # flow[:, 1, :, :] *= 48/128
+            target[:, 0, :, :] *= 64/128
+            target[:, 1, :, :] *= 48/128
+            flow[:, 0, :, :] *= 64/128
+            flow[:, 1, :, :] *= 48/128
 
-            # print("Tstamps list: ", self.video.tstamp.tolist()[:self.video.counter.value])
-            # print("Last keyframe added: ", self.video.tstamp.tolist()[self.video.counter.value-1])
-            # print("New pose:", self.video.poses[max(ii.max().item(), jj.max().item())].tolist())
-            # print("target_magnitude_mean shape: ", torch.mean(torch.norm(target, dim=1), dim=[1, 2]).shape)
-            # target_mag_mean = torch.mean(torch.norm(target, dim=1), dim=[1, 2])
-            # flow_mag_mean = torch.mean(torch.norm(flow, dim=1), dim=[1, 2])
-            # # delta = delta.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
-            # # delta_mag_mean = torch.mean(torch.norm(delta.to(dtype=torch.float), dim=1), dim=[1,2])
-            # for idx in range(len(target_mag_mean)):
-            #     print(f"Pair (ii, jj):({self.video.tstamp.tolist()[ii.tolist()[idx]]}, {self.video.tstamp.tolist()[jj.tolist()[idx]]}) target mag: {target_mag_mean[idx]}, flow mag: {flow_mag_mean[idx]}")
-            # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            print("Tstamps list: ", self.video.tstamp.tolist()[:self.video.counter.value])
+            print("Last keyframe added: ", self.video.tstamp.tolist()[self.video.counter.value-1])
+            print("New pose:", self.video.poses[max(ii.max().item(), jj.max().item())].tolist())
+            print("target_magnitude_mean shape: ", torch.mean(torch.norm(target, dim=1), dim=[1, 2]).shape)
+            target_mag_mean = torch.mean(torch.norm(target, dim=1), dim=[1, 2])
+            flow_mag_mean = torch.mean(torch.norm(flow, dim=1), dim=[1, 2])
+            # delta = delta.view(-1, ht, wd, 2).permute(0,3,1,2).contiguous()
+            # delta_mag_mean = torch.mean(torch.norm(delta.to(dtype=torch.float), dim=1), dim=[1,2])
+            for idx in range(len(target_mag_mean)):
+                print(f"Pair (ii, jj):({self.video.tstamp.tolist()[ii.tolist()[idx]]}, {self.video.tstamp.tolist()[jj.tolist()[idx]]}) target mag: {target_mag_mean[idx]}, flow mag: {flow_mag_mean[idx]}")
+            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         
             # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
             # if self.upsample:

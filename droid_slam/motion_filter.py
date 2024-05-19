@@ -134,7 +134,7 @@ class MotionFilter:
 
             est_flow, _ = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
 
-            # check motion magnitue / add new frame to video
+            # check motion magnitude / add new frame to video
             if est_flow.norm(dim=-1).mean().item() > self.thresh:
                 self.count = 0
                 net, inp = self.__context_encoder(inputs[:,[0]])
