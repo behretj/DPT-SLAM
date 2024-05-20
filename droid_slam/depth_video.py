@@ -9,6 +9,9 @@ from collections import OrderedDict
 from droid_net import cvx_upsample
 import geom.projective_ops as pops
 
+from thirdparty.DOT.dot.models.interpolation import interpolate
+from thirdparty.DOT.dot.utils.torch import get_grid
+
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=400, stereo=False, device="cuda:0"):
         buffer = 400
@@ -23,6 +26,9 @@ class DepthVideo:
         self.ready = Value('i', 0)
         self.ht = ht = image_size[0]
         self.wd = wd = image_size[1]
+
+        ### for distance measure using flow ###
+        self.thresh = 2.5
 
         ### state attributes ###
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
@@ -169,34 +175,111 @@ class DepthVideo:
     def distance(self, ii=None, jj=None, beta=0.3, bidirectional=True):
         """ frame distance metric """
 
-        return_matrix = False
-        if ii is None:
-            return_matrix = True
-            N = self.counter.value
-            ii, jj = torch.meshgrid(torch.arange(N), torch.arange(N))
+        # return_matrix = False
+        # if ii is None:
+        #     return_matrix = True
+        #     N = self.counter.value
+        #     ii, jj = torch.meshgrid(torch.arange(N), torch.arange(N))
         
-        ii, jj = DepthVideo.format_indicies(ii, jj)
+        # ii, jj = DepthVideo.format_indicies(ii, jj)
 
-        if bidirectional:
+        # if bidirectional:
 
-            poses = self.poses[:self.counter.value].clone()
+        #     poses = self.poses[:self.counter.value].clone()
 
-            d1 = droid_backends.frame_distance(
-                poses, self.disps, self.intrinsics[0], ii, jj, beta)
+        #     d1 = droid_backends.frame_distance(
+        #         poses, self.disps, self.intrinsics[0], ii, jj, beta)
 
-            d2 = droid_backends.frame_distance(
-                poses, self.disps, self.intrinsics[0], jj, ii, beta)
+        #     d2 = droid_backends.frame_distance(
+        #         poses, self.disps, self.intrinsics[0], jj, ii, beta)
 
-            d = .5 * (d1 + d2)
+        #     d = .5 * (d1 + d2)
 
-        else:
-            d = droid_backends.frame_distance(
-                self.poses, self.disps, self.intrinsics[0], ii, jj, beta)
+        # else:
+        #     d = droid_backends.frame_distance(
+        #         self.poses, self.disps, self.intrinsics[0], ii, jj, beta)
 
-        if return_matrix:
-            return d.reshape(N, N)
+        # if return_matrix:
+        #     return d.reshape(N, N)
 
-        return d
+
+
+
+
+
+
+        # # count num of tracks between every pair of frames to filter out pairs with not enough tracks
+        # tstamps_list = (self.tstamp).tolist()
+
+        # sources_list = [int(tstamps_list[i]) for i in ii]
+        # targets_list = [int(tstamps_list[i]) for i in jj]
+
+        # num_tracks_used = []
+
+        # for idx in range(len(sources_list)):
+        #     ### Doing approximate flow estimation
+        #     src_points = self.cotracker_track[:, sources_list[idx]].to('cuda')
+        #     tgt_points = self.cotracker_track[:, targets_list[idx]].to('cuda')
+        #     grid = get_grid(128, 128).to("cuda")
+
+        #     if bidirectional:
+        #         num_tracks_used1 = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d", check_tracks=True)
+        #         num_tracks_used2 = interpolate(src_points=tgt_points, tgt_points=src_points, grid=grid, version="torch3d", check_tracks=True)
+
+        #         num_tracks_used.append((num_tracks_used1 + num_tracks_used2) / 2)
+        #     else:
+        #         num_tracks = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d", check_tracks=True)
+        #         num_tracks_used.append(num_tracks)
+        
+        # num_tracks_used = torch.tensor(num_tracks_used).to('cuda')
+
+        # return d, num_tracks_used
+
+        tstamps_list = (self.tstamp).tolist()
+
+        sources_list = [int(tstamps_list[i]) for i in ii]
+        targets_list = [int(tstamps_list[i]) for i in jj]
+
+        d = []
+        num_tracks_used = []
+
+        for idx in range(len(sources_list)):
+            ### Doing approximate flow estimation
+            src_points = self.cotracker_track[:, sources_list[idx]].to('cuda')
+            tgt_points = self.cotracker_track[:, targets_list[idx]].to('cuda')
+            grid = get_grid(128, 128).to("cuda")
+
+            if bidirectional:
+                est_flow_forward, _, num_tracks_used1 = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
+                est_flow_backward, _, num_tracks_used2 = interpolate(src_points=tgt_points, tgt_points=src_points, grid=grid, version="torch3d")
+
+                if num_tracks_used1 == 0 or num_tracks_used2 == 0:
+                    num_tracks_used.append(0)
+                    d.append(0)
+                    continue
+
+                num_tracks_used.append((num_tracks_used1 + num_tracks_used2) / 2)
+
+                d1 = est_flow_forward.norm(dim=-1).mean().item()
+                d2 = est_flow_backward.norm(dim=-1).mean().item()
+
+                d.append(.5 * (d1 + d2))
+            else:
+                est_flow, _, num_tracks = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
+
+                if num_tracks_used == 0:
+                    num_tracks_used.append(0)
+                    d.append(0)
+                    continue
+
+                d.append(est_flow.norm(dim=-1).mean().item())
+                num_tracks_used.append(num_tracks)
+        
+        d = torch.tensor(d).to('cuda')
+        num_tracks_used = torch.tensor(num_tracks_used).to('cuda')
+        return d, num_tracks_used
+
+
 
     def ba(self, target, weight, eta, ii, jj, t0=1, t1=None, itrs=2, lm=1e-4, ep=0.1, motion_only=False):
         """ dense bundle adjustment (DBA) """

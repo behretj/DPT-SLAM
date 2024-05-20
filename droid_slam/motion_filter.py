@@ -132,7 +132,7 @@ class MotionFilter:
             tgt_points = self.video.cotracker_track[:, tstamp].to('cuda')
             grid = get_grid(128, 128).to("cuda")
 
-            est_flow, _ = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
+            est_flow, _, _ = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d")
 
             # check motion magnitude / add new frame to video
             if est_flow.norm(dim=-1).mean().item() > self.thresh:

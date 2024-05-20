@@ -19,6 +19,7 @@ class DroidFrontend:
         # frontent variables
         self.is_initialized = False
         self.count = 0
+        self.init_iters = 2
 
         self.max_age = 25
 
@@ -38,8 +39,8 @@ class DroidFrontend:
 
         # 1 remove old pairs of frames from graph
         #   TODO: to change with another thing as we don't use correlation volumes anymore
-        if self.graph.corr is not None:
-            self.graph.rm_factors(self.graph.age > self.max_age, store=True)
+        # if self.graph.corr is not None:
+        self.graph.rm_factors(self.graph.age > self.max_age, store=True)
 
         # 2 add frame pairs to graph based on distance measure (for newly added keyframe)
         #   compute refined flow and weights for new pairs in graph
@@ -54,7 +55,7 @@ class DroidFrontend:
 
         # set initial pose for next frame
         poses = SE3(self.video.poses)
-        d = self.video.distance([self.t1-3], [self.t1-2], beta=self.beta, bidirectional=True)
+        d, _ = self.video.distance([self.t1-3], [self.t1-2], beta=self.beta, bidirectional=True)
 
         if d.item() < self.keyframe_thresh:
             self.graph.rm_keyframe(self.t1 - 2)
@@ -85,14 +86,14 @@ class DroidFrontend:
         self.graph.add_neighborhood_factors(self.t0, self.t1, r=3)
 
         # 2 do BA to refine poses and depth maps
-        self.graph.update_DOT_SLAM(1, use_inactive=True)
+        self.graph.update_DOT_SLAM(1, use_inactive=True, ba_calls=4*self.init_iters)
 
         # 3 add frame pairs to graph based on distance measure
         #   compute refined flow and weights for new pairs in graph
-        self.graph.add_proximity_factors(0, 0, rad=2, nms=2, thresh=self.frontend_thresh, remove=False)
+        self.graph.add_proximity_factors(0, 0, rad=2, nms=2, thresh=self.frontend_thresh, remove=False, init=True)
 
         # 4 do BA to refine poses and depth maps
-        self.graph.update_DOT_SLAM(1, use_inactive=True)
+        self.graph.update_DOT_SLAM(1, use_inactive=True, ba_calls=4*self.init_iters)
 
         # self.video.normalize()
         self.video.poses[self.t1] = self.video.poses[self.t1-1].clone()

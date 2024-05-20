@@ -27,15 +27,23 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
     images_left = sorted(glob.glob(os.path.join(datapath, 'image_left/*.png')))
     images_right = sorted(glob.glob(os.path.join(datapath, 'image_right/*.png')))
 
+
+    # duplicate last image to make num of images divisible by 4
+    remainder = len(images_left) % 4
+    if remainder != 0:
+        num_duplicates = 4 - remainder
+        last_image_path = images_left[-1]
+        for _ in range(num_duplicates):
+            images_left.append(last_image_path)
+
+
     data = []
     for t in range(len(images_left)):
         if add_new_img:
             # reading and resizing the image for dot
             image_dot = transform(cv2.cvtColor(cv2.imread(images_left[t]), cv2.COLOR_BGR2RGB))
             C, h, w = image_dot.shape
-            # print('image_dot.shape', image_dot.shape)
             image_dot = F.interpolate(image_dot[None], size=(512, 512), mode="bilinear")[0]
-            # print('image_dot.shape', image_dot.shape)
 
         images = [ cv2.resize(cv2.imread(images_left[t]), (image_size[1], image_size[0])) ]
         if stereo:
@@ -43,7 +51,6 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
 
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
         
-        # TODO: changed intrinsics of camera depending on image size
         # INPUT size TartanAir 480x640
         # Processing size 384x512 DROID, 512x512 DOT
         intrinsics = torch.as_tensor(intrinsics_vec)
@@ -110,13 +117,17 @@ if __name__ == '__main__':
 
         scenedir = os.path.join(args.datapath, scene)
 
-
         for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
             droid.track(tstamp, image, intrinsics=intrinsics, image_dot=image_dot)
 
-        # fill in non-keyframe poses + global BA
+        # fill in non-keyframe poses
         traj_est = droid.terminate(image_stream(scenedir))
             
+        # Only keep original images poses not the added ones to get to num divisible by 4
+        len_video = len(glob.glob(os.path.join(scenedir, 'image_left', '*')))
+
+        traj_est = traj_est[:len_video]
+
         filled_traj = np.copy(traj_est)
 
         ### do evaluation ###

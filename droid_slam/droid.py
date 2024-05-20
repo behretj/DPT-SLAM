@@ -78,7 +78,7 @@ class Droid:
 
         del self.frontend
 
-        # torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         # print("#" * 32)
         # self.backend(7)
 
@@ -87,7 +87,7 @@ class Droid:
         # self.backend(12)
 
         #print("_")
-        #print("Poses before traj filler: ", self.video.poses, flush=True)
+
         # Convert tensor to list
         poses_list = self.video.poses.tolist()
 
