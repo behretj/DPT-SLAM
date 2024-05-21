@@ -18,7 +18,7 @@ import json
 class Droid:
     def __init__(self, args):
         super(Droid, self).__init__()
-        self.load_weights(args.weights)
+        # self.load_weights(args.weights)
         self.args = args
         self.disable_vis = args.disable_vis
 
@@ -26,13 +26,16 @@ class Droid:
         self.video = DepthVideo(args.image_size, args.buffer, stereo=args.stereo)
 
         # filter incoming frames so that there is enough motion
-        self.filterx = MotionFilter(self.net, self.video, thresh=args.filter_thresh)
+        self.filterx = MotionFilter(self.video, thresh=args.filter_thresh)
+        # self.filterx = MotionFilter(self.net, self.video, thresh=args.filter_thresh)
 
         # frontend process
-        self.frontend = DroidFrontend(self.net, self.video, self.args)
+        self.frontend = DroidFrontend(self.video, self.args)
+        # self.frontend = DroidFrontend(self.net, self.video, self.args)
         
         # backend process
-        self.backend = DroidBackend(self.net, self.video, self.args)
+        self.backend = DroidBackend(self.video, self.args)
+        # self.backend = DroidBackend(self.net, self.video, self.args)
 
         # visualizer
         if not self.disable_vis:
@@ -41,31 +44,35 @@ class Droid:
             self.visualizer.start()
 
         # post processor - fill in poses for non-keyframes
-        self.traj_filler = PoseTrajectoryFiller(self.net, self.video)
+        self.traj_filler = PoseTrajectoryFiller(self.video)
+        # self.traj_filler = PoseTrajectoryFiller(self.net, self.video)
 
 
     def load_weights(self, weights):
         """ load trained model weights """
 
-        print(weights)
-        self.net = DroidNet()
-        state_dict = OrderedDict([
-            (k.replace("module.", ""), v) for (k, v) in torch.load(weights).items()])
+        # print(weights)
+        # self.net = DroidNet()
+        # state_dict = OrderedDict([
+        #     (k.replace("module.", ""), v) for (k, v) in torch.load(weights).items()])
 
-        state_dict["update.weight.2.weight"] = state_dict["update.weight.2.weight"][:2]
-        state_dict["update.weight.2.bias"] = state_dict["update.weight.2.bias"][:2]
-        state_dict["update.delta.2.weight"] = state_dict["update.delta.2.weight"][:2]
-        state_dict["update.delta.2.bias"] = state_dict["update.delta.2.bias"][:2]
+        # state_dict["update.weight.2.weight"] = state_dict["update.weight.2.weight"][:2]
+        # state_dict["update.weight.2.bias"] = state_dict["update.weight.2.bias"][:2]
+        # state_dict["update.delta.2.weight"] = state_dict["update.delta.2.weight"][:2]
+        # state_dict["update.delta.2.bias"] = state_dict["update.delta.2.bias"][:2]
 
-        self.net.load_state_dict(state_dict)
-        self.net.to("cuda:0").eval()
+        # self.net.load_state_dict(state_dict)
+        # self.net.to("cuda:0").eval()
+        pass
 
-    def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
+    # def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
+    def track(self, tstamp, depth=None, intrinsics=None, image_dot=None):
         """ main thread - update map """
 
         with torch.no_grad():
             # check there is enough motion
-            self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot, self.frontend)
+            # self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot, self.frontend)
+            self.filterx.track_buffer(tstamp, depth, intrinsics, image_dot, self.frontend)
 
             # local bundle adjustment
             # self.frontend()

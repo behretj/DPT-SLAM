@@ -8,37 +8,41 @@ from factor_graph import FactorGraph
 from droid_net import DroidNet
 import geom.projective_ops as pops
 
+from tqdm import tqdm
+
 
 class PoseTrajectoryFiller:
     """ This class is used to fill in non-keyframe poses """
 
-    def __init__(self, net, video, device="cuda:0"):
+    def __init__(self, video, device="cuda:0"):
+    # def __init__(self, net, video, device="cuda:0"):
         
         # split net modules
-        self.cnet = net.cnet
-        self.fnet = net.fnet
-        self.update = net.update
+        # self.cnet = net.cnet
+        # self.fnet = net.fnet
+        # self.update = net.update
 
         self.count = 0
         self.video = video
         self.device = device
 
         # mean, std for image normalization
-        self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
-        self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
+        # self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
+        # self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
         
-    @torch.cuda.amp.autocast(enabled=True)
-    def __feature_encoder(self, image):
-        """ features for correlation volume """
-        return self.fnet(image)
+    # @torch.cuda.amp.autocast(enabled=True)
+    # def __feature_encoder(self, image):
+    #     """ features for correlation volume """
+        # return self.fnet(image)
 
-    def __fill(self, tstamps, images, intrinsics):
+    def __fill(self, tstamps, intrinsics):
+    # def __fill(self, tstamps, images, intrinsics):
         """ fill operator """
 
         tt = torch.as_tensor(tstamps, device="cuda")
-        images = torch.stack(images, 0)
+        # images = torch.stack(images, 0)
         intrinsics = torch.stack(intrinsics, 0)
-        inputs = images[:,:,[2,1,0]].to(self.device) / 255.0
+        # inputs = images[:,:,[2,1,0]].to(self.device) / 255.0
         
         ### linear pose interpolation ###
         N = self.video.counter.value
@@ -58,13 +62,17 @@ class PoseTrajectoryFiller:
         Gs = SE3.exp(w) * Ps[t0]
 
         # extract features (no need for context features)
-        inputs = inputs.sub_(self.MEAN).div_(self.STDV)
-        fmap = self.__feature_encoder(inputs)
+        # inputs = inputs.sub_(self.MEAN).div_(self.STDV)
+        # fmap = self.__feature_encoder(inputs)
 
         self.video.counter.value += M
-        self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 4.0, fmap)
+        self.video[N:N+M] = (tt, Gs.data, 1, None, intrinsics / 4.0)
+        # self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 4.0, fmap)
 
-        graph = FactorGraph(self.video, self.update)
+        graph = FactorGraph(self.video)
+        # graph = FactorGraph(self.video, self.update)
+        # print(f'trajectory_filter, t0: {t0}')
+        # print(f'trajectory_filter, t1: {t1}')
         graph.add_factors(t0.cuda(), torch.arange(N, N+M).cuda())
         graph.add_factors(t1.cuda(), torch.arange(N, N+M).cuda())
 
@@ -84,20 +92,24 @@ class PoseTrajectoryFiller:
         pose_list = []
 
         tstamps = []
-        images = []
+        # images = []
         intrinsics = []
         
-        for (tstamp, image, intrinsic) in image_stream:
+        # for (tstamp, image, intrinsic) in image_stream:
+        for (tstamp, intrinsic) in tqdm(image_stream, 'Trajectory filter'):
             tstamps.append(tstamp)
-            images.append(image)
+            # images.append(image)
             intrinsics.append(intrinsic)
 
             if len(tstamps) == 16:
-                pose_list += self.__fill(tstamps, images, intrinsics)
-                tstamps, images, intrinsics = [], [], []
+                pose_list += self.__fill(tstamps, intrinsics)
+                # pose_list += self.__fill(tstamps, images, intrinsics)
+                tstamps, intrinsics = [], []
+                # tstamps, images, intrinsics = [], [], []
 
         if len(tstamps) > 0:
-            pose_list += self.__fill(tstamps, images, intrinsics)
+            pose_list += self.__fill(tstamps, intrinsics)
+            # pose_list += self.__fill(tstamps, images, intrinsics)
 
         # stitch pose segments together
         return lietorch.cat(pose_list, 0)

@@ -25,7 +25,7 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
     # read all png images in folder
     ht0, wd0 = [480, 640]
     images_left = sorted(glob.glob(os.path.join(datapath, 'image_left/*.png')))
-    images_right = sorted(glob.glob(os.path.join(datapath, 'image_right/*.png')))
+    # images_right = sorted(glob.glob(os.path.join(datapath, 'image_right/*.png')))
 
 
     # duplicate last image to make num of images divisible by 4
@@ -45,11 +45,11 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
             C, h, w = image_dot.shape
             image_dot = F.interpolate(image_dot[None], size=(512, 512), mode="bilinear")[0]
 
-        images = [ cv2.resize(cv2.imread(images_left[t]), (image_size[1], image_size[0])) ]
-        if stereo:
-            images += [ cv2.resize(cv2.imread(images_right[t]), (image_size[1], image_size[0])) ]
+        # images = [ cv2.resize(cv2.imread(images_left[t]), (image_size[1], image_size[0])) ]
+        # if stereo:
+        #     images += [ cv2.resize(cv2.imread(images_right[t]), (image_size[1], image_size[0])) ]
 
-        images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
+        # images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
         
         # INPUT size TartanAir 480x640
         # Processing size 384x512 DROID, 512x512 DOT
@@ -60,9 +60,11 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
         intrinsics[3] *= image_size[0] / 480.0
 
         if add_new_img:
-            data.append((t, images, intrinsics, image_dot))
+            # data.append((t, images, intrinsics, image_dot))
+            data.append((t, intrinsics, image_dot))
         else:
-            data.append((t, images, intrinsics))
+            # data.append((t, images, intrinsics))
+            data.append((t, intrinsics))
 
     return data
 
@@ -117,8 +119,9 @@ if __name__ == '__main__':
 
         scenedir = os.path.join(args.datapath, scene)
 
-        for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
-            droid.track(tstamp, image, intrinsics=intrinsics, image_dot=image_dot)
+        # for (tstamp, image, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
+        for (tstamp, intrinsics, image_dot) in tqdm(image_stream(scenedir, stereo=args.stereo, add_new_img=True)):
+            droid.track(tstamp, intrinsics=intrinsics, image_dot=image_dot)
 
         # fill in non-keyframe poses
         traj_est = droid.terminate(image_stream(scenedir))

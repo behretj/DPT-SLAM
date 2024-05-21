@@ -12,12 +12,13 @@ import geom.projective_ops as pops
 from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
 
 class FactorGraph:
-    def __init__(self, video, update_op, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
+    # def __init__(self, video, update_op, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
+    def __init__(self, video, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
         self.video = video
-        self.update_op = update_op
+        # self.update_op = update_op
         self.device = device
         self.max_factors = max_factors
-        self.corr_impl = corr_impl
+        # self.corr_impl = corr_impl
         self.upsample = upsample
 
         # operator at 1/4 resolution
@@ -33,7 +34,7 @@ class FactorGraph:
         self.jj = torch.as_tensor([], dtype=torch.long, device=device)
         self.age = torch.as_tensor([], dtype=torch.long, device=device)
 
-        self.corr, self.net, self.inp = None, None, None
+        # self.corr, self.net, self.inp = None, None, None
         self.damping = 1e-6 * torch.ones_like(self.video.disps)
 
         # inactive factors
@@ -42,9 +43,9 @@ class FactorGraph:
         self.ii_bad = torch.as_tensor([], dtype=torch.long, device=device)
         self.jj_bad = torch.as_tensor([], dtype=torch.long, device=device)
 
-        self.optical_flow_refiner = OpticalFlow(height=512, width=512,
-                                                config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
-                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
+        # self.video.optical_flow_refiner = OpticalFlow(height=512, width=512,
+        #                                         config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
+        #                                         load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
 
 
     def __filter_repeated_edges(self, ii, jj):
@@ -85,12 +86,13 @@ class FactorGraph:
 
     def clear_edges(self):
         self.rm_factors(self.ii >= 0)
-        self.net = None
-        self.inp = None
+        # self.net = None
+        # self.inp = None
 
     @torch.cuda.amp.autocast(enabled=True)
     def add_factors(self, ii, jj, remove=False):
         """ add edges to factor graph """
+        # print(f'add_factores ii: {ii}, jj: {jj}')
 
         if not isinstance(ii, torch.Tensor):
             ii = torch.as_tensor(ii, dtype=torch.long, device=self.device)
@@ -106,36 +108,41 @@ class FactorGraph:
 
         # place limit on number of factors
         if self.max_factors > 0 and self.ii.shape[0] + ii.shape[0] > self.max_factors \
-                and self.corr is not None and remove:
+                and remove:
+                # and self.corr is not None and remove:
             
             ix = torch.arange(len(self.age))[torch.argsort(self.age).cpu()]
             self.rm_factors(ix >= self.max_factors - ii.shape[0], store=True)
 
-        net = self.video.nets[ii].to(self.device).unsqueeze(0)
+        # net = self.video.nets[ii].to(self.device).unsqueeze(0)
 
         # correlation volume for new edges
-        if self.corr_impl == "volume":
-            c = (ii == jj).long()
-            fmap1 = self.video.fmaps[ii,0].to(self.device).unsqueeze(0)
-            fmap2 = self.video.fmaps[jj,c].to(self.device).unsqueeze(0)
-            corr = CorrBlock(fmap1, fmap2)
-            self.corr = corr if self.corr is None else self.corr.cat(corr)
+        # if self.corr_impl == "volume":
+        #     c = (ii == jj).long()
+        #     fmap1 = self.video.fmaps[ii,0].to(self.device).unsqueeze(0)
+        #     fmap2 = self.video.fmaps[jj,c].to(self.device).unsqueeze(0)
+        #     corr = CorrBlock(fmap1, fmap2)
+        #     self.corr = corr if self.corr is None else self.corr.cat(corr)
 
-            inp = self.video.inps[ii].to(self.device).unsqueeze(0)
-            self.inp = inp if self.inp is None else torch.cat([self.inp, inp], 1)
+        #     inp = self.video.inps[ii].to(self.device).unsqueeze(0)
+        #     self.inp = inp if self.inp is None else torch.cat([self.inp, inp], 1)
 
         with torch.cuda.amp.autocast(enabled=False):
             track = self.video.cotracker_track
             
             tstamps_list = (self.video.tstamp).tolist()
+            # print('factor_graph, add_factor: tstamps_list', tstamps_list)
+            # print(f'-------- add_factores ii: {ii}, jj: {jj}')
             ii_list = (ii).tolist()
             jj_list = (jj).tolist()
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
+            # print('sources_list', sources_list)
+            # print('targets_list', targets_list)
             video = self.video.image_dot
 
-            self.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
+            self.video.optical_flow_refiner(track, mode="flow_between_frames", video=video, ii=sources_list, jj=targets_list)
             torch.cuda.empty_cache()
 
         self.ii = torch.cat([self.ii, ii], 0)
@@ -144,7 +151,7 @@ class FactorGraph:
         self.age = torch.cat([self.age, torch.zeros_like(ii)], 0)
 
         # reprojection factors
-        self.net = net if self.net is None else torch.cat([self.net, net], 1)
+        # self.net = net if self.net is None else torch.cat([self.net, net], 1)
 
 
     @torch.cuda.amp.autocast(enabled=True)
@@ -169,16 +176,16 @@ class FactorGraph:
         self.jj = self.jj[~mask]
         self.age = self.age[~mask]
         
-        if self.corr_impl == "volume":
-            self.corr = self.corr[~mask]
+        # if self.corr_impl == "volume":
+        #     self.corr = self.corr[~mask]
 
-        if self.net is not None:
-            self.net = self.net[:,~mask]
+        # if self.net is not None:
+        #     self.net = self.net[:,~mask]
 
-        if self.inp is not None:
-            self.inp = self.inp[:,~mask]
+        # if self.inp is not None:
+        #     self.inp = self.inp[:,~mask]
 
-        self.optical_flow_refiner.rm_flows(sources_list, targets_list, store=store)
+        self.video.optical_flow_refiner.rm_flows(sources_list, targets_list, store=store)
 
         # self.target = self.target[:,~mask]
         # self.weight = self.weight[:,~mask]
@@ -193,15 +200,15 @@ class FactorGraph:
         """ drop edges from factor graph """
 
         with self.video.get_lock():
-            self.video.images[ix] = self.video.images[ix+1]
+            # self.video.images[ix] = self.video.images[ix+1]
             self.video.poses[ix] = self.video.poses[ix+1]
             self.video.disps[ix] = self.video.disps[ix+1]
             self.video.disps_sens[ix] = self.video.disps_sens[ix+1]
             self.video.intrinsics[ix] = self.video.intrinsics[ix+1]
 
-            self.video.nets[ix] = self.video.nets[ix+1]
-            self.video.inps[ix] = self.video.inps[ix+1]
-            self.video.fmaps[ix] = self.video.fmaps[ix+1]
+            # self.video.nets[ix] = self.video.nets[ix+1]
+            # self.video.inps[ix] = self.video.inps[ix+1]
+            # self.video.fmaps[ix] = self.video.fmaps[ix+1]
 
         m = (self.ii_inac == ix) | (self.jj_inac == ix)
 
@@ -213,7 +220,7 @@ class FactorGraph:
 
             sources_list = [int(tstamps_list[i]) for i in ii_list]
             targets_list = [int(tstamps_list[i]) for i in jj_list]
-            self.optical_flow_refiner.reset_inac(sources_list, targets_list)
+            self.video.optical_flow_refiner.reset_inac(sources_list, targets_list)
 
             self.ii_inac = self.ii_inac[~m]
             self.jj_inac = self.jj_inac[~m]
@@ -361,17 +368,14 @@ class FactorGraph:
                 # Get the flow and weight from the dictionaries
                 if use_inactive:
                     if idx < num_inac:
-                        flow = self.optical_flow_refiner.refined_flow_inac[i][j].to('cuda')
-                        flow = self.coords0 + flow
-                        w = self.optical_flow_refiner.refined_weight_inac[i][j].to('cuda')
+                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow_inac[i][j].to('cuda')
+                        w = self.video.optical_flow_refiner.refined_weight_inac[i][j].to('cuda')
                     else:
-                        flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                        flow = self.coords0 + flow
-                        w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
+                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j].to('cuda')
+                        w = self.video.optical_flow_refiner.refined_weight[i][j].to('cuda')
                 else:
-                    flow = self.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                    flow = self.coords0 + flow
-                    w = self.optical_flow_refiner.refined_weight[i][j].to('cuda')
+                    flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j].to('cuda')
+                    w = self.video.optical_flow_refiner.refined_weight[i][j].to('cuda')
 
                 target.append(flow)
                 weight.append(w)

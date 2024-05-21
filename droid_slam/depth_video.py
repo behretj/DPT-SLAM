@@ -12,6 +12,8 @@ import geom.projective_ops as pops
 from thirdparty.DOT.dot.models.interpolation import interpolate
 from thirdparty.DOT.dot.utils.torch import get_grid
 
+from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
+
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=400, stereo=False, device="cuda:0"):
         buffer = 400
@@ -32,7 +34,7 @@ class DepthVideo:
 
         ### state attributes ###
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
-        self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
+        # self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
         self.dirty = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.red = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
         self.poses = torch.zeros(buffer, 7, device="cuda", dtype=torch.float).share_memory_()
@@ -45,14 +47,18 @@ class DepthVideo:
         c = 1 if not self.stereo else 2
 
         ### feature attributes ###
-        self.fmaps = torch.zeros(buffer, c, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
-        self.nets = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
-        self.inps = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
+        # self.fmaps = torch.zeros(buffer, c, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
+        # self.nets = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
+        # self.inps = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
 
         # initialize poses to identity transformation
         self.poses[:] = torch.as_tensor([0, 0, 0, 0, 0, 0, 1], dtype=torch.float, device="cuda")
 
         self.image_dot = []
+
+        self.optical_flow_refiner = OpticalFlow(height=512, width=512,
+                                                config='./thirdparty/DOT/dot/configs/raft_patch_4_alpha.json',
+                                                load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
         
     def get_lock(self):
         return self.counter.get_lock()
@@ -71,35 +77,35 @@ class DepthVideo:
         # self.dirty[index] = True
         self.tstamp[index] = item[0]
 
-        self.images[index] = item[1]
+        # self.images[index] = item[1]
         # print(f'adding image {index}')
         # print('self.counter.value', self.counter.value)
         # print(item[1])
 
+        if item[1] is not None:
+            self.poses[index] = item[1]
+
         if item[2] is not None:
-            self.poses[index] = item[2]
+            self.disps[index] = item[2]
 
         if item[3] is not None:
-            self.disps[index] = item[3]
-
-        if item[4] is not None:
-            depth = item[4][3::8,3::8]
+            depth = item[3][3::8,3::8]
             self.disps_sens[index] = torch.where(depth>0, 1.0/depth, depth)
 
-        if item[5] is not None:
-            self.intrinsics[index] = item[5]
+        if item[4] is not None:
+            self.intrinsics[index] = item[4]
 
-        if len(item) > 6:
-            self.fmaps[index] = item[6]
+        # if len(item) > 6:
+        #     self.fmaps[index] = item[6]
 
-        if len(item) > 7:
-            self.nets[index] = item[7]
+        # if len(item) > 7:
+        #     self.nets[index] = item[7]
 
-        if len(item) > 8:
-            self.inps[index] = item[8]
+        # if len(item) > 8:
+        #     self.inps[index] = item[8]
 
-        if len(item) > 9:
-            self.image_dot.append(item[9].to('cpu'))
+        if len(item) > 5:
+            self.image_dot.append(item[5].to('cpu'))
             # print(f'Adding dot image')
 
     def __setitem__(self, index, item):
@@ -118,9 +124,10 @@ class DepthVideo:
                 self.poses[index],
                 self.disps[index],
                 self.intrinsics[index],
-                self.fmaps[index],
-                self.nets[index],
-                self.inps[index])
+                # self.fmaps[index],
+                # self.nets[index],
+                # self.inps[index]
+            )
 
         return item
 

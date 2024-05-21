@@ -7,9 +7,10 @@ from factor_graph import FactorGraph
 
 
 class DroidBackend:
-    def __init__(self, net, video, args):
+    def __init__(self, video, args):
+    # def __init__(self, net, video, args):
         self.video = video
-        self.update_op = net.update
+        # self.update_op = net.update
 
         # global optimization window
         self.t0 = 0
