@@ -77,11 +77,11 @@ class MotionFilter:
             data["video_chunk"] = torch.stack(list(self.buffer), dim=1).permute(1, 0, 2, 3)[None]   # video =(Batch, frames, channel, height, width)
             B, T, C, h, w = data["video_chunk"].shape
 
-            H, W = 512,512 #self.resolution
-            if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
-                data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
-                data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
-                data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
+            # H, W = 512,512 #self.resolution
+            # if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
+            #     data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
+            #     data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
+            #     data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
             ## initilization of tracks
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
             if self.target_batch_size<=tstamp:
@@ -94,8 +94,8 @@ class MotionFilter:
                     frontend()
                 self.droid_buffer.clear()
 
-                if len(self.video.cotracker_track[0]) == 380:
-                    self.plot_traj_video()
+                # if len(self.video.cotracker_track[0]) == 380:
+                #     self.plot_traj_video()
 
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
