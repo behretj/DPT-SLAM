@@ -368,14 +368,14 @@ class FactorGraph:
                 # Get the flow and weight from the dictionaries
                 if use_inactive:
                     if idx < num_inac:
-                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow_inac[i][j].to('cuda')
-                        w = self.video.optical_flow_refiner.refined_weight_inac[i][j].to('cuda')
+                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow_inac[i][j]#.to('cuda')
+                        w = self.video.optical_flow_refiner.refined_weight_inac[i][j]#.to('cuda')
                     else:
-                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                        w = self.video.optical_flow_refiner.refined_weight[i][j].to('cuda')
+                        flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j]#.to('cuda')
+                        w = self.video.optical_flow_refiner.refined_weight[i][j]#.to('cuda')
                 else:
-                    flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j].to('cuda')
-                    w = self.video.optical_flow_refiner.refined_weight[i][j].to('cuda')
+                    flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j]#.to('cuda')
+                    w = self.video.optical_flow_refiner.refined_weight[i][j]#.to('cuda')
 
                 target.append(flow)
                 weight.append(w)
