@@ -425,7 +425,7 @@ class FactorGraph:
             for i in range(len(flow_list)):
                 timestamp_ii = self.video.tstamp.to('cpu')[ii_np[i]]
                 timestamp_jj = self.video.tstamp.to('cpu')[jj_np[i]]
-                filename = f'{namedir}/flow_{int(timestamp_ii)}_to_{int(timestamp_jj)}.npy'
+                filename = f'{name_dir}/flow_{int(timestamp_ii)}_to_{int(timestamp_jj)}.npy'
                 if not os.path.isfile(filename) and timestamp_ii != timestamp_jj:
                     np.save(filename, flow_list[i].to('cpu'))
 
