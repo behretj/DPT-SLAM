@@ -92,7 +92,7 @@ class Droid:
         poses_list = self.video.poses.tolist()
 
         # Save list to a file
-        with open('poses.json', 'w') as f:
+        with open('poses_'+'harris'+'_'+str(2000)+'.json', 'w') as f:
             print("saving poses")
             json.dump(poses_list, f)
 

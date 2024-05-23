@@ -111,6 +111,7 @@ if __name__ == '__main__':
     ate_list = []
     filled_traj = None
     for scene in test_split:
+        print("harris 2000")
         print("Performing evaluation on {}".format(scene))
         torch.cuda.empty_cache()
         droid = Droid(args)
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     # save filled poses
     if filled_traj is not None:
         print("saving filled poses")
-        np.savetxt('poses_filled.txt', filled_traj)
+        np.savetxt('poses_filleds_'+'harris'+'_'+str(2000)+'.txt', filled_traj)
 
     if args.plot_curve:
         import matplotlib.pyplot as plt
