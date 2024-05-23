@@ -28,6 +28,7 @@ class FactorGraph:
         self.wd = wd = 128
 
         self.tracks_thresh = 128
+        self.name_dir = 'Flow_values_2048kp_FAST_harris_P001'
 
         self.coords0 = pops.coords_grid(ht, wd, device=device)
         self.ii = torch.as_tensor([], dtype=torch.long, device=device)
@@ -362,6 +363,7 @@ class FactorGraph:
             # Iterate over the ii and jj lists
             l = len(sources_list)
             target, weight = [], []
+            flow_list = []
             for idx in range(l):
                 i = sources_list[idx]
                 j = targets_list[idx]
@@ -369,12 +371,15 @@ class FactorGraph:
                 if use_inactive:
                     if idx < num_inac:
                         flow = self.coords0 + self.video.optical_flow_refiner.refined_flow_inac[i][j]#.to('cuda')
+                        flow_list.append(self.video.optical_flow_refiner.refined_flow[i][j])
                         w = self.video.optical_flow_refiner.refined_weight_inac[i][j]#.to('cuda')
                     else:
                         flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j]#.to('cuda')
+                        flow_list.append(self.video.optical_flow_refiner.refined_flow[i][j])
                         w = self.video.optical_flow_refiner.refined_weight[i][j]#.to('cuda')
                 else:
                     flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j]#.to('cuda')
+                    flow_list.append(self.video.optical_flow_refiner.refined_flow[i][j])
                     w = self.video.optical_flow_refiner.refined_weight[i][j]#.to('cuda')
 
                 target.append(flow)
@@ -383,9 +388,13 @@ class FactorGraph:
             # Convert the lists to PyTorch tensors and add the necessary dimensions
             target = torch.stack(target, dim=0).to(device="cuda", dtype=torch.float)[None]
             weight = torch.stack(weight, dim=0).to(device="cuda", dtype=torch.float)[None]
+            flow_list = torch.stack(flow_list, dim=0).to(device="cuda", dtype=torch.float)[None]
+
 
             target = target.squeeze(0).permute(0, 3, 1, 2).contiguous()
             weight = weight.squeeze(0).permute(0, 3, 1, 2).contiguous()
+            flow_list = flow_list.squeeze(0).permute(0, 3, 1, 2).contiguous()
+
 
             # Input fixed damping values (eta)
             damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  0.005).to(device="cuda", dtype=torch.float).contiguous()
@@ -404,5 +413,20 @@ class FactorGraph:
             # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
             # if self.upsample:
             #     self.video.upsample(torch.unique(self.ii), upmask)
+
+            # Save flow to directory
+            name_dir = self.name_dir
+            if not os.path.exists(name_dir):
+                os.makedirs(name_dir)
+
+            ii_np = ii.to('cpu').numpy()
+            jj_np = jj.to('cpu').numpy()
+
+            for i in range(len(flow_list)):
+                timestamp_ii = self.video.tstamp.to('cpu')[ii_np[i]]
+                timestamp_jj = self.video.tstamp.to('cpu')[jj_np[i]]
+                filename = f'{namedir}/flow_{int(timestamp_ii)}_to_{int(timestamp_jj)}.npy'
+                if not os.path.isfile(filename) and timestamp_ii != timestamp_jj:
+                    np.save(filename, flow_list[i].to('cpu'))
 
         self.age += 1
