@@ -371,7 +371,7 @@ class FactorGraph:
                 if use_inactive:
                     if idx < num_inac:
                         flow = self.coords0 + self.video.optical_flow_refiner.refined_flow_inac[i][j]#.to('cuda')
-                        flow_list.append(self.video.optical_flow_refiner.refined_flow[i][j])
+                        flow_list.append(self.video.optical_flow_refiner.refined_flow_inac[i][j])
                         w = self.video.optical_flow_refiner.refined_weight_inac[i][j]#.to('cuda')
                     else:
                         flow = self.coords0 + self.video.optical_flow_refiner.refined_flow[i][j]#.to('cuda')
