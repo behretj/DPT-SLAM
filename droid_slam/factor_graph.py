@@ -27,7 +27,7 @@ class FactorGraph:
         self.ht = ht = 128
         self.wd = wd = 128
 
-        self.tracks_thresh = 512
+        self.tracks_thresh = 128
 
         self.coords0 = pops.coords_grid(ht, wd, device=device)
         self.ii = torch.as_tensor([], dtype=torch.long, device=device)

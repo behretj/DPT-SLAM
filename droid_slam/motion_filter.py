@@ -94,7 +94,7 @@ class MotionFilter:
                     frontend()
                 self.droid_buffer.clear()
 
-                # if len(self.video.cotracker_track[0]) == 380:
+                # if len(self.video.cotracker_track[0]) == 300:
                 #     self.plot_traj_video()
 
     @torch.cuda.amp.autocast(enabled=True)

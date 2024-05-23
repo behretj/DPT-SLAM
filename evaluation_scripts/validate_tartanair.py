@@ -108,7 +108,7 @@ if __name__ == '__main__':
         test_split = [ test_split[args.id] ]
     
     ### overwrite test split, one scene for now (TODO: change in the end)
-    test_split = ["P001"]
+    test_split = ["P006"]
 
     ate_list = []
     filled_traj = None
