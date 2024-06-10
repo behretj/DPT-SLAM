@@ -52,7 +52,7 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
         images = torch.from_numpy(np.stack(images, 0)).permute(0,3,1,2)
         
         # INPUT size TartanAir 480x640
-        # Processing size 384x512 DROID, 512x512 DOT
+        # Processing size DOT 512x512
         intrinsics = torch.as_tensor(intrinsics_vec)
         intrinsics[0] *= image_size[1] / 640.0
         intrinsics[1] *= image_size[0] / 480.0
@@ -70,7 +70,6 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--datapath", default="datasets/TartanAir")
-    parser.add_argument("--weights", default="droid.pth")
     parser.add_argument("--buffer", type=int, default=1000)
     parser.add_argument("--image_size", default=[512,512])
     parser.add_argument("--stereo", action="store_true")
@@ -92,7 +91,6 @@ if __name__ == '__main__':
     parser.add_argument("--backend_nms", type=int, default=3)
 
     args = parser.parse_args()
-    ### is required, but somehow not passed without adding next line (TODO: check if really needed)
     args.upsample = True
     torch.multiprocessing.set_start_method('spawn')
 
@@ -105,14 +103,11 @@ if __name__ == '__main__':
     if args.id >= 0:
         test_split = [ test_split[args.id] ]
     
-    ### overwrite test split, one scene for now (TODO: change in the end)
     test_split = ["P001"]
 
     ate_list = []
     filled_traj = None
     for scene in test_split:
-        print("harris 2000")
-        print("Performing evaluation on {}".format(scene))
         torch.cuda.empty_cache()
         droid = Droid(args)
 
@@ -124,7 +119,7 @@ if __name__ == '__main__':
         # fill in non-keyframe poses
         traj_est = droid.terminate(image_stream(scenedir))
             
-        # Only keep original images poses not the added ones to get to num divisible by 4
+        # Only keep original image poses not the added ones to get to num divisible by 4
         len_video = len(glob.glob(os.path.join(scenedir, 'image_left', '*')))
 
         traj_est = traj_est[:len_video]
@@ -146,11 +141,6 @@ if __name__ == '__main__':
     print("Results")
     print(ate_list)
 
-    # save filled poses
-    if filled_traj is not None:
-        print("saving filled poses")
-        np.savetxt('poses_filleds_'+'harris'+'_'+str(2000)+'.txt', filled_traj)
-
     if args.plot_curve:
         import matplotlib.pyplot as plt
         ate = np.array(ate_list)
@@ -161,4 +151,3 @@ if __name__ == '__main__':
         plt.xlabel("ATE [m]")
         plt.ylabel("% runs")
         plt.show()
-
