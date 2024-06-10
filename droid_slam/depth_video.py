@@ -6,20 +6,11 @@ import droid_backends
 from torch.multiprocessing import Process, Queue, Lock, Value
 from collections import OrderedDict
 
-from droid_net import cvx_upsample
-import geom.projective_ops as pops
-
 from thirdparty.DOT.dot.models.interpolation import interpolate
 from thirdparty.DOT.dot.utils.torch import get_grid
 
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=400, stereo=False, device="cuda:0"):
-        buffer = 400
-        print('DepthVideo __init__: buffer', buffer)
-        print('DepthVideo __init__: image_size', image_size)
-
-        # CoTracker for the Video
-        # self.cotracker = CoTrackerOnlineModel() ### TODO: do initializing here
 
         # current keyframe count
         self.counter = Value('i', 0)
@@ -44,11 +35,6 @@ class DepthVideo:
         self.stereo = stereo
         c = 1 if not self.stereo else 2
 
-        ### feature attributes ###
-        self.fmaps = torch.zeros(buffer, c, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
-        self.nets = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
-        self.inps = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device="cuda").share_memory_()
-
         # initialize poses to identity transformation
         self.poses[:] = torch.as_tensor([0, 0, 0, 0, 0, 0, 1], dtype=torch.float, device="cuda")
 
@@ -58,9 +44,8 @@ class DepthVideo:
         return self.counter.get_lock()
 
     def __item_setter(self, index, item):
-        if (len(item) == 1): # not key frame, only add to image_dot
+        if (len(item) == 1): # not keyframe, only add to image_dot
             self.image_dot.append(item[0].to('cpu'))
-            # print('Adding non-keyframe')
             return
         if isinstance(index, int) and index >= self.counter.value:
             self.counter.value = index + 1
@@ -72,9 +57,6 @@ class DepthVideo:
         self.tstamp[index] = item[0]
 
         self.images[index] = item[1]
-        # print(f'adding image {index}')
-        # print('self.counter.value', self.counter.value)
-        # print(item[1])
 
         if item[2] is not None:
             self.poses[index] = item[2]
@@ -90,17 +72,7 @@ class DepthVideo:
             self.intrinsics[index] = item[5]
 
         if len(item) > 6:
-            self.fmaps[index] = item[6]
-
-        if len(item) > 7:
-            self.nets[index] = item[7]
-
-        if len(item) > 8:
-            self.inps[index] = item[8]
-
-        if len(item) > 9:
-            self.image_dot.append(item[9].to('cpu'))
-            # print(f'Adding dot image')
+            self.image_dot.append(item[6].to('cpu'))
 
     def __setitem__(self, index, item):
         with self.get_lock():
@@ -117,10 +89,8 @@ class DepthVideo:
             item = (
                 self.poses[index],
                 self.disps[index],
-                self.intrinsics[index],
-                self.fmaps[index],
-                self.nets[index],
-                self.inps[index])
+                self.intrinsics[index]
+                )
 
         return item
 
@@ -129,111 +99,8 @@ class DepthVideo:
             self.__item_setter(self.counter.value, item)
 
 
-    ### geometric operations ###
-
-    @staticmethod
-    def format_indicies(ii, jj):
-        """ to device, long, {-1} """
-
-        if not isinstance(ii, torch.Tensor):
-            ii = torch.as_tensor(ii)
-
-        if not isinstance(jj, torch.Tensor):
-            jj = torch.as_tensor(jj)
-
-        ii = ii.to(device="cuda", dtype=torch.long).reshape(-1)
-        jj = jj.to(device="cuda", dtype=torch.long).reshape(-1)
-
-        return ii, jj
-
-    def upsample(self, ix, mask):
-        """ upsample disparity """
-
-        disps_up = cvx_upsample(self.disps[ix].unsqueeze(-1), mask)
-        self.disps_up[ix] = disps_up.squeeze()
-
-    def normalize(self):
-        """ normalize depth and poses """
-
-        with self.get_lock():
-            s = self.disps[:self.counter.value].mean()
-            self.disps[:self.counter.value] /= s
-            self.poses[:self.counter.value,:3] *= s
-            self.dirty[:self.counter.value] = True
-
-
-    def reproject(self, ii, jj):
-        """ project points from ii -> jj """
-        ii, jj = DepthVideo.format_indicies(ii, jj)
-        Gs = lietorch.SE3(self.poses[None])
-
-        coords, valid_mask = \
-            pops.projective_transform(Gs, self.disps[None], self.intrinsics[None], ii, jj)
-
-        return coords, valid_mask
-
     def distance(self, ii=None, jj=None, beta=0.3, bidirectional=True):
-        """ frame distance metric """
-
-        # return_matrix = False
-        # if ii is None:
-        #     return_matrix = True
-        #     N = self.counter.value
-        #     ii, jj = torch.meshgrid(torch.arange(N), torch.arange(N))
-        
-        # ii, jj = DepthVideo.format_indicies(ii, jj)
-
-        # if bidirectional:
-
-        #     poses = self.poses[:self.counter.value].clone()
-
-        #     d1 = droid_backends.frame_distance(
-        #         poses, self.disps, self.intrinsics[0], ii, jj, beta)
-
-        #     d2 = droid_backends.frame_distance(
-        #         poses, self.disps, self.intrinsics[0], jj, ii, beta)
-
-        #     d = .5 * (d1 + d2)
-
-        # else:
-        #     d = droid_backends.frame_distance(
-        #         self.poses, self.disps, self.intrinsics[0], ii, jj, beta)
-
-        # if return_matrix:
-        #     return d.reshape(N, N)
-
-
-
-
-
-
-
-        # # count num of tracks between every pair of frames to filter out pairs with not enough tracks
-        # tstamps_list = (self.tstamp).tolist()
-
-        # sources_list = [int(tstamps_list[i]) for i in ii]
-        # targets_list = [int(tstamps_list[i]) for i in jj]
-
-        # num_tracks_used = []
-
-        # for idx in range(len(sources_list)):
-        #     ### Doing approximate flow estimation
-        #     src_points = self.cotracker_track[:, sources_list[idx]].to('cuda')
-        #     tgt_points = self.cotracker_track[:, targets_list[idx]].to('cuda')
-        #     grid = get_grid(128, 128).to("cuda")
-
-        #     if bidirectional:
-        #         num_tracks_used1 = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d", check_tracks=True)
-        #         num_tracks_used2 = interpolate(src_points=tgt_points, tgt_points=src_points, grid=grid, version="torch3d", check_tracks=True)
-
-        #         num_tracks_used.append((num_tracks_used1 + num_tracks_used2) / 2)
-        #     else:
-        #         num_tracks = interpolate(src_points=src_points, tgt_points=tgt_points, grid=grid, version="torch3d", check_tracks=True)
-        #         num_tracks_used.append(num_tracks)
-        
-        # num_tracks_used = torch.tensor(num_tracks_used).to('cuda')
-
-        # return d, num_tracks_used
+        """ frame distance metric using flow between frames"""
 
         tstamps_list = (self.tstamp).tolist()
 
@@ -244,7 +111,7 @@ class DepthVideo:
         num_tracks_used = []
 
         for idx in range(len(sources_list)):
-            ### Doing approximate flow estimation
+            ### Doing approximate flow estimation ###
             src_points = self.cotracker_track[:, sources_list[idx]].to('cuda')
             tgt_points = self.cotracker_track[:, targets_list[idx]].to('cuda')
             grid = get_grid(128, 128).to("cuda")
@@ -280,7 +147,6 @@ class DepthVideo:
         return d, num_tracks_used
 
 
-
     def ba(self, target, weight, eta, ii, jj, t0=1, t1=None, itrs=2, lm=1e-4, ep=0.1, motion_only=False):
         """ dense bundle adjustment (DBA) """
 
@@ -289,18 +155,6 @@ class DepthVideo:
             # [t0, t1] window of bundle adjustment optimization
             if t1 is None:
                 t1 = max(ii.max().item(), jj.max().item()) + 1
-
-
-            # Check the shapes of the tensors
-            # print("****************************************")
-            # print("POSES shape:", self.poses.shape)
-            # print("Depths shape:", self.disps.shape)
-            # print("Depths sens shape:", self.disps_sens.shape)
-            # print("Intrinsics[0]:", self.intrinsics[0])
-            # print("Target shape: ", target.shape)
-            # print("Weight shape: ", weight.shape)
-            # print("Damping shape: ", eta.shape)
-            itrs = 8
 
             droid_backends.ba(self.poses, self.disps, self.intrinsics[0], self.disps_sens,
                 target, weight, eta, ii, jj, t0, t1, itrs, lm, ep, motion_only)

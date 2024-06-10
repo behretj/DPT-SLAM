@@ -6,18 +6,15 @@ import os
 
 import matplotlib.pyplot as plt
 from lietorch import SE3
-from modules.corr import CorrBlock, AltCorrBlock
 import geom.projective_ops as pops
 
 from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
 
 class FactorGraph:
-    def __init__(self, video, update_op, device="cuda:0", corr_impl="volume", max_factors=-1, upsample=False):
+    def __init__(self, video, device="cuda:0", max_factors=-1, upsample=False):
         self.video = video
-        self.update_op = update_op
         self.device = device
         self.max_factors = max_factors
-        self.corr_impl = corr_impl
         self.upsample = upsample
 
         # operator at 1/4 resolution
@@ -33,7 +30,6 @@ class FactorGraph:
         self.jj = torch.as_tensor([], dtype=torch.long, device=device)
         self.age = torch.as_tensor([], dtype=torch.long, device=device)
 
-        self.corr, self.net, self.inp = None, None, None
         self.damping = 1e-6 * torch.ones_like(self.video.disps)
 
         # inactive factors
@@ -60,33 +56,6 @@ class FactorGraph:
 
         return ii[keep], jj[keep]
 
-    def print_edges(self):
-        ii = self.ii.cpu().numpy()
-        jj = self.jj.cpu().numpy()
-
-        ix = np.argsort(ii)
-        ii = ii[ix]
-        jj = jj[ix]
-
-        w = torch.mean(self.weight, dim=[0,2,3,4]).cpu().numpy()
-        w = w[ix]
-        for e in zip(ii, jj, w):
-            print(e)
-        print()
-
-    def filter_edges(self):
-        """ remove bad edges """
-        conf = torch.mean(self.weight, dim=[0,2,3,4])
-        mask = (torch.abs(self.ii-self.jj) > 2) & (conf < 0.001)
-
-        self.ii_bad = torch.cat([self.ii_bad, self.ii[mask]])
-        self.jj_bad = torch.cat([self.jj_bad, self.jj[mask]])
-        self.rm_factors(mask, store=False)
-
-    def clear_edges(self):
-        self.rm_factors(self.ii >= 0)
-        self.net = None
-        self.inp = None
 
     @torch.cuda.amp.autocast(enabled=True)
     def add_factors(self, ii, jj, remove=False):
@@ -105,24 +74,9 @@ class FactorGraph:
             return
 
         # place limit on number of factors
-        if self.max_factors > 0 and self.ii.shape[0] + ii.shape[0] > self.max_factors \
-                and self.corr is not None and remove:
-            
+        if self.max_factors > 0 and self.ii.shape[0] + ii.shape[0] > self.max_factors and remove:
             ix = torch.arange(len(self.age))[torch.argsort(self.age).cpu()]
             self.rm_factors(ix >= self.max_factors - ii.shape[0], store=True)
-
-        net = self.video.nets[ii].to(self.device).unsqueeze(0)
-
-        # correlation volume for new edges
-        if self.corr_impl == "volume":
-            c = (ii == jj).long()
-            fmap1 = self.video.fmaps[ii,0].to(self.device).unsqueeze(0)
-            fmap2 = self.video.fmaps[jj,c].to(self.device).unsqueeze(0)
-            corr = CorrBlock(fmap1, fmap2)
-            self.corr = corr if self.corr is None else self.corr.cat(corr)
-
-            inp = self.video.inps[ii].to(self.device).unsqueeze(0)
-            self.inp = inp if self.inp is None else torch.cat([self.inp, inp], 1)
 
         with torch.cuda.amp.autocast(enabled=False):
             track = self.video.cotracker_track
@@ -143,9 +97,6 @@ class FactorGraph:
         
         self.age = torch.cat([self.age, torch.zeros_like(ii)], 0)
 
-        # reprojection factors
-        self.net = net if self.net is None else torch.cat([self.net, net], 1)
-
 
     @torch.cuda.amp.autocast(enabled=True)
     def rm_factors(self, mask, store=False):
@@ -162,30 +113,14 @@ class FactorGraph:
         if store:
             self.ii_inac = torch.cat([self.ii_inac, self.ii[mask]], 0)
             self.jj_inac = torch.cat([self.jj_inac, self.jj[mask]], 0)
-            # self.target_inac = torch.cat([self.target_inac, self.target[:,mask]], 1)
-            # self.weight_inac = torch.cat([self.weight_inac, self.weight[:,mask]], 1)
 
         self.ii = self.ii[~mask]
         self.jj = self.jj[~mask]
         self.age = self.age[~mask]
-        
-        if self.corr_impl == "volume":
-            self.corr = self.corr[~mask]
-
-        if self.net is not None:
-            self.net = self.net[:,~mask]
-
-        if self.inp is not None:
-            self.inp = self.inp[:,~mask]
 
         self.optical_flow_refiner.rm_flows(sources_list, targets_list, store=store)
 
-        # self.target = self.target[:,~mask]
-        # self.weight = self.weight[:,~mask]
-
         torch.cuda.empty_cache()
-
-
 
 
     @torch.cuda.amp.autocast(enabled=True)
@@ -198,10 +133,6 @@ class FactorGraph:
             self.video.disps[ix] = self.video.disps[ix+1]
             self.video.disps_sens[ix] = self.video.disps_sens[ix+1]
             self.video.intrinsics[ix] = self.video.intrinsics[ix+1]
-
-            self.video.nets[ix] = self.video.nets[ix+1]
-            self.video.inps[ix] = self.video.inps[ix+1]
-            self.video.fmaps[ix] = self.video.fmaps[ix+1]
 
         m = (self.ii_inac == ix) | (self.jj_inac == ix)
 
@@ -217,9 +148,6 @@ class FactorGraph:
 
             self.ii_inac = self.ii_inac[~m]
             self.jj_inac = self.jj_inac[~m]
-
-            # self.target_inac = self.target_inac[:,~m]
-            # self.weight_inac = self.weight_inac[:,~m]
 
         m = (self.ii == ix) | (self.jj == ix)
 
@@ -265,8 +193,6 @@ class FactorGraph:
 
         d[ii - rad < jj] = np.inf
         d[d > 100] = np.inf
-        # don't do pairs if flow between the two frames is obtained with not enough tracks
-        # TODO: maybe not be useful the init part, just do it always
         if not init:
             d[num_tracks_used < self.tracks_thresh] = np.inf
 
@@ -326,7 +252,6 @@ class FactorGraph:
     Update function which performs BA
     - substitutes update of DROID
     """
-    # TODO: check if autocast is necessary if we only use BA and not droid's GRU
     @torch.cuda.amp.autocast(enabled=True)
     def update_DOT_SLAM(self, t0=None, t1=None, itrs=2, ba_calls=4, use_inactive=False, EP=1e-7, motion_only=False):
         """ run update operator on factor graph """
@@ -396,9 +321,5 @@ class FactorGraph:
                 # dense bundle adjustment
                 self.video.ba(target, weight, damping, ii, jj, t0, t1, 
                     itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
-        
-            # WE DON'T HAVE THE UPMASK ANYMORE IF WE DON'T USE DROID GRU
-            # if self.upsample:
-            #     self.video.upsample(torch.unique(self.ii), upmask)
 
         self.age += 1

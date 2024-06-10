@@ -7,10 +7,9 @@ from factor_graph import FactorGraph
 
 
 class DroidFrontend:
-    def __init__(self, net, video, args):
+    def __init__(self, video, args):
         self.video = video
-        self.update_op = net.update
-        self.graph = FactorGraph(video, net.update, max_factors=48, upsample=args.upsample)
+        self.graph = FactorGraph(video, max_factors=48, upsample=args.upsample)
 
         # local optimization window
         self.t0 = 0
@@ -38,8 +37,6 @@ class DroidFrontend:
         self.t1 += 1
 
         # 1 remove old pairs of frames from graph
-        #   TODO: to change with another thing as we don't use correlation volumes anymore
-        # if self.graph.corr is not None:
         self.graph.rm_factors(self.graph.age > self.max_age, store=True)
 
         # 2 add frame pairs to graph based on distance measure (for newly added keyframe)
@@ -95,7 +92,6 @@ class DroidFrontend:
         # 4 do BA to refine poses and depth maps
         self.graph.update_DOT_SLAM(1, use_inactive=True, ba_calls=4*self.init_iters)
 
-        # self.video.normalize()
         self.video.poses[self.t1] = self.video.poses[self.t1-1].clone()
         self.video.disps[self.t1] = self.video.disps[self.t1-4:self.t1].mean()
 
@@ -121,5 +117,3 @@ class DroidFrontend:
         # do update
         elif self.is_initialized and self.t1 < self.video.counter.value:
             self.__update()
-
-        
