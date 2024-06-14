@@ -62,7 +62,7 @@ class MotionFilter:
                 data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
                 data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
             ## initilization of tracks
-            self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_at_motion_boundaries_online_droid")["tracks"]
+            self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_online_droid")["tracks"]
             if self.target_batch_size<=tstamp:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1).to('cpu')
                 # all the images have been registered in CoTracker, we can add them to Droid now:
