@@ -13,23 +13,24 @@ Tjark Behrens, Damiano Da Col, Théo Ducrey and Wenqing Wang
 
 **Initial Code Release:** This directory currently provides our implementation of DPT-SLAM as described in our report. This work was done in the context of the course 3D Vision at ETH Zürich
 File structure of principal parts and contributions
+
 DOT-SLAM\
 ├── datasets\
-│   ├── TartanAir                               # Data :            Contain the different scenes we used for testing
-│   │   ├── P000
-│   │   ├── ...
-│   │   └── P006
-│   ├── TartanAir_small                         # Data :            Contain the different scenes we used for fast testing of new functions
-├── evaluation_scripts/validate_tartanair.py    # Evaluation :      line 106 may be edited to switch testing between the different scene
-├── droid_slam
+│   ├── TartanAir                               # Data :            Contain the different scenes we used for testing\
+│   │   ├── P000\
+│   │   ├── ...\
+│   │   └── P006\
+│   ├── TartanAir_small                         # Data :            Contain the different scenes we used for fast testing of new functions\
+├── evaluation_scripts/validate_tartanair.py    # Evaluation :      line 106 may be edited to switch testing between the different scene\
+├── droid_slam\
 
-├── thirdparty
-│   ├── DOT
-│   │   ├── Checkpoints
-│   │   ├── dot
-│   │   │   ├── models
-│   │   │   │   ├── point_tracking.py           # Implementation :  implementing most of the changes of the section 3.2.1 of the report
-├── tools/validate_tartanair.sh                 # Evaluation :      can be modified to switch testing between small scene and actual scene of Tatanair
+├── thirdparty\
+│   ├── DOT\
+│   │   ├── Checkpoints\
+│   │   ├── dot\
+│   │   │   ├── models\
+│   │   │   │   ├── point_tracking.py           # Implementation :  implementing most of the changes of the section 3.2.1 of the report\
+├── tools/validate_tartanair.sh                 # Evaluation :      can be modified to switch testing between small scene and actual scene of Tatanair\
 
 
 
