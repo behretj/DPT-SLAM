@@ -1,7 +1,7 @@
 # DROID-SLAM
 
 
-<center><img src="misc/pipeline.png" width="640" style="center"></center>
+<center><img src="misc/pipeline.png" width="1216" style="center"></center>
 
 
 
