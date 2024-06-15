@@ -13,8 +13,8 @@ Tjark Behrens, Damiano Da Col, Théo Ducrey and Wenqing Wang
 
 **Initial Code Release:** This directory currently provides our implementation of DPT-SLAM as described in our report. This work was done in the context of the course 3D Vision at ETH Zürich
 File structure of principal parts and contributions
-DOT-SLAM
-├── datasets
+DOT-SLAM                                                                                                                                              \
+├── datasets                                                                                                                                          \    
 │   ├── TartanAir                               # Data :            Contain the different scenes we used for testing
 │   │   ├── P000
 │   │   ├── ...
