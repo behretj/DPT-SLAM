@@ -22,10 +22,10 @@ class MotionFilter:
     """ This class is used to filter incoming frames """
 
     def __init__(self, video, thresh=2.5, device="cuda:0",
-                    tracker_config="thirdparty/DOT/configs/cotracker2_patch_4_wind_8.json",
-                    tracker_path="thirdparty/DOT/checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
-                    estimator_config="thirdparty/DOT/configs/raft_patch_8.json",
-                    estimator_path="thirdparty/DOT/checkpoints/cvo_raft_patch_8.pth"):
+                    tracker_config="thirdparty/DOT/dot/configs/cotracker2_patch_4_wind_8.json",
+                    tracker_path="thirdparty/DOT/dot/checkpoints/movi_f_cotracker2_patch_4_wind_8.pth",
+                    estimator_config="thirdparty/DOT/dot/configs/raft_patch_8.json",
+                    estimator_path="thirdparty/DOT/dot/checkpoints/cvo_raft_patch_8.pth"):
 
         self.video = video
         self.thresh = thresh
