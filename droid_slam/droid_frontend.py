@@ -5,7 +5,9 @@ import numpy as np
 from lietorch import SE3
 from factor_graph import FactorGraph
 
-
+"""
+Frontend class of DPT-SLAM system
+"""
 class DroidFrontend:
     def __init__(self, video, args):
         self.video = video
@@ -30,8 +32,12 @@ class DroidFrontend:
         self.frontend_thresh = args.frontend_thresh
         self.frontend_radius = args.frontend_radius
 
+    """
+    update method called for each newly added keyframe.
+        - add edges to factor graph
+        - perform update step
+    """
     def __update(self):
-        """ add edges, perform update """
 
         self.count += 1
         self.t1 += 1
@@ -72,8 +78,11 @@ class DroidFrontend:
         # update visualization
         self.video.dirty[self.graph.ii.min():self.t1] = True
 
+
+    """
+    initialize the SLAM system
+    """
     def __initialize(self):
-        """ initialize the SLAM system """
 
         self.t0 = 0
         self.t1 = self.video.counter.value
@@ -107,8 +116,12 @@ class DroidFrontend:
 
         self.graph.rm_factors(self.graph.ii < self.warmup-4, store=True)
 
+
+    """
+    - only call initialization when enough key-frames have been selected
+    - only call update on selected key-frames not all frames
+    """
     def __call__(self):
-        """ main update """
 
         # do initialization
         if not self.is_initialized and self.video.counter.value >= self.warmup:

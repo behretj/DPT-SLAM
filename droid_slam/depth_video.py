@@ -9,6 +9,9 @@ from collections import OrderedDict
 from thirdparty.DOT.dot.models.interpolation import interpolate
 from thirdparty.DOT.dot.utils.torch import get_grid
 
+"""
+Class managing all data for poses and depth maps
+"""
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=400, stereo=False, device="cuda:0"):
 
@@ -53,7 +56,6 @@ class DepthVideo:
         elif isinstance(index, torch.Tensor) and index.max().item() > self.counter.value:
             self.counter.value = index.max().item() + 1
 
-        # self.dirty[index] = True
         self.tstamp[index] = item[0]
 
         self.images[index] = item[1]
@@ -99,8 +101,10 @@ class DepthVideo:
             self.__item_setter(self.counter.value, item)
 
 
+    """
+    Frame distance metric using flow between frames
+    """
     def distance(self, ii=None, jj=None, beta=0.3, bidirectional=True):
-        """ frame distance metric using flow between frames"""
 
         tstamps_list = (self.tstamp).tolist()
 
@@ -147,8 +151,10 @@ class DepthVideo:
         return d, num_tracks_used
 
 
+    """
+    dense bundle adjustment (DBA)
+    """
     def ba(self, target, weight, eta, ii, jj, t0=1, t1=None, itrs=2, lm=1e-4, ep=0.1, motion_only=False):
-        """ dense bundle adjustment (DBA) """
 
         with self.get_lock():
 

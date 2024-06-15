@@ -8,8 +8,10 @@ from factor_graph import FactorGraph
 import geom.projective_ops as pops
 
 
+"""
+Class used to fill in non-keyframe poses
+"""
 class PoseTrajectoryFiller:
-    """ This class is used to fill in non-keyframe poses """
 
     def __init__(self, video, device="cuda:0"):
 
@@ -22,8 +24,10 @@ class PoseTrajectoryFiller:
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
 
 
+    """
+    fill operator
+    """
     def __fill(self, tstamps, images, intrinsics):
-        """ fill operator """
 
         tt = torch.as_tensor(tstamps, device="cuda")
         images = torch.stack(images, 0)
@@ -65,9 +69,11 @@ class PoseTrajectoryFiller:
 
         return [ Gs ]
 
+    """
+    fill in poses of non-keyframe images
+    """
     @torch.no_grad()
     def __call__(self, image_stream):
-        """ fill in poses of non-keyframe images """
 
         # store all camera poses
         pose_list = []

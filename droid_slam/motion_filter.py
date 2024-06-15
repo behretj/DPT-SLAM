@@ -18,8 +18,12 @@ import numpy as np
 from matplotlib import colormaps
 from tqdm import tqdm
 
+
+"""
+Class used to filter incoming frames and select key-frames
+    - only select frames with enough motion from last selected frame
+"""
 class MotionFilter:
-    """ This class is used to filter incoming frames """
 
     def __init__(self, video, thresh=2.5, device="cuda:0",
                     tracker_config="thirdparty/DOT/dot/configs/cotracker2_patch_4_wind_8.json",
@@ -45,6 +49,12 @@ class MotionFilter:
         self.is_first_step = True
 
 
+    """
+    main update operation - run on every frame in video
+        - get new tracks from CoTracker every time 4 new frames have been accumulated
+        - call track method
+        - run frontend of DPT-SLAM
+    """
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
     def track_buffer(self, tstamp, image, depth=None, intrinsics=None, image_dot=None, frontend=None):
@@ -56,26 +66,32 @@ class MotionFilter:
             data["video_chunk"] = torch.stack(list(self.buffer), dim=1).permute(1, 0, 2, 3)[None]   # video =(Batch, frames, channel, height, width)
             B, T, C, h, w = data["video_chunk"].shape
 
-            H, W = 512,512 #self.resolution
+            H, W = 512,512
             if h != H or w != W: #Reshape the frames to RAFT input size (512x512)
                 data["video_chunk"] = data["video_chunk"].reshape(B * T, C, h, w)
                 data["video_chunk"] = F.interpolate(data["video_chunk"], size=(H, W), mode="bilinear")
                 data["video_chunk"] = data["video_chunk"].reshape(B, T, C, H, W)
-            ## initilization of tracks
+            
+            # initilization of tracks
             self.video.cotracker_track = self.online_point_tracker(data, mode="tracks_online_droid")["tracks"]
             if self.target_batch_size<=tstamp:
                 self.video.cotracker_track = torch.stack([self.video.cotracker_track[..., 0] / (w - 1), self.video.cotracker_track[..., 1] / (h - 1), self.video.cotracker_track[..., 2]], dim=-1).to('cpu')
-                # all the images have been registered in CoTracker, we can add them to Droid now:
+                
+                # all the images have been registered in CoTracker, we can add them to SLAM system now:
                 for args in self.droid_buffer:
                     self.track(*args)
                     frontend()
                 self.droid_buffer.clear()
 
 
+    """
+    select key-frames
+        - interpolate sparce tracks into dense tracks
+        - select frames if they have enough motion from last selected key-frame
+    """
     @torch.cuda.amp.autocast(enabled=True)
     @torch.no_grad()
     def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
-        """ main update operation - run on every frame in video """
 
         Id = lietorch.SE3.Identity(1,).data.squeeze()
 

@@ -32,15 +32,20 @@ class Droid:
         self.traj_filler = PoseTrajectoryFiller(self.video)
 
 
+    """
+    main thread: processes all frames sequentially
+    """
     def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
-        """ main thread - update map """
 
         with torch.no_grad():
             # check there is enough motion
             self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot, self.frontend)
 
+
+    """
+    method to terminate frontend process and return poses also for non-keyframes
+    """
     def terminate(self, stream=None):
-        """ return poses [t, q] """
 
         del self.frontend
 

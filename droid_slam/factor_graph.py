@@ -10,6 +10,10 @@ import geom.projective_ops as pops
 
 from thirdparty.DOT.dot.models.optical_flow import OpticalFlow
 
+
+"""
+Class managing the factor graph with frame pairs
+"""
 class FactorGraph:
     def __init__(self, video, device="cuda:0", max_factors=-1, upsample=False):
         self.video = video
@@ -43,8 +47,10 @@ class FactorGraph:
                                                 load_path='./thirdparty/DOT/dot/checkpoints/movi_f_raft_patch_4_alpha.pth').cuda()
 
 
+    """
+    remove duplicate edges
+    """
     def __filter_repeated_edges(self, ii, jj):
-        """ remove duplicate edges """
 
         keep = torch.zeros(ii.shape[0], dtype=torch.bool, device=ii.device)
         eset = set(
@@ -57,9 +63,11 @@ class FactorGraph:
         return ii[keep], jj[keep]
 
 
+    """
+    add edges to factor graph
+    """
     @torch.cuda.amp.autocast(enabled=True)
     def add_factors(self, ii, jj, remove=False):
-        """ add edges to factor graph """
 
         if not isinstance(ii, torch.Tensor):
             ii = torch.as_tensor(ii, dtype=torch.long, device=self.device)
@@ -98,9 +106,11 @@ class FactorGraph:
         self.age = torch.cat([self.age, torch.zeros_like(ii)], 0)
 
 
+    """
+    drop edges from factor graph
+    """
     @torch.cuda.amp.autocast(enabled=True)
     def rm_factors(self, mask, store=False):
-        """ drop edges from factor graph """
 
         tstamps_list = (self.video.tstamp).tolist()
         ii_list = (self.ii[mask]).tolist()
@@ -123,9 +133,11 @@ class FactorGraph:
         torch.cuda.empty_cache()
 
 
+    """
+    drop edges from factor graph associated to removed key-frame
+    """
     @torch.cuda.amp.autocast(enabled=True)
     def rm_keyframe(self, ix):
-        """ drop edges from factor graph """
 
         with self.video.get_lock():
             self.video.images[ix] = self.video.images[ix+1]
@@ -165,8 +177,11 @@ class FactorGraph:
             self.video.tstamp[-1] = 0.0
 
 
+    """
+    add edges between neighboring frames within radius r
+        - called for initialization of factor graph
+    """
     def add_neighborhood_factors(self, t0, t1, r=3):
-        """ add edges between neighboring frames within radius r """
 
         ii, jj = torch.meshgrid(torch.arange(t0,t1), torch.arange(t0,t1))
         ii = ii.reshape(-1).to(dtype=torch.long, device=self.device)
@@ -178,8 +193,11 @@ class FactorGraph:
         self.add_factors(ii[keep], jj[keep])
 
     
+    """
+    add edges to the factor graph based on distance
+        - called for each newly added key-frame in factor graph
+    """
     def add_proximity_factors(self, t0=0, t1=0, rad=2, nms=2, beta=0.25, thresh=16.0, remove=False, init=False):
-        """ add edges to the factor graph based on distance """
 
         t = self.video.counter.value
         ix = torch.arange(t0, t)
@@ -250,11 +268,10 @@ class FactorGraph:
 
     """
     Update function which performs BA
-    - substitutes update of DROID
+        - substitutes update step of DROID-SLAM
     """
     @torch.cuda.amp.autocast(enabled=True)
     def update_DOT_SLAM(self, t0=None, t1=None, itrs=2, ba_calls=4, use_inactive=False, EP=1e-7, motion_only=False):
-        """ run update operator on factor graph """
 
         if t0 is None:
             t0 = max(1, self.ii.min().item()+1)
@@ -318,7 +335,7 @@ class FactorGraph:
                 elif (iters == 2):
                     damping = torch.full((torch.unique(ii).size(0), target.shape[2], target.shape[3]),  1e-6).to(device="cuda", dtype=torch.float).contiguous()
                 
-                # dense bundle adjustment
+                # call dense bundle adjustment
                 self.video.ba(target, weight, damping, ii, jj, t0, t1, 
                     itrs=itrs, lm=1e-4, ep=0.1, motion_only=motion_only)
 

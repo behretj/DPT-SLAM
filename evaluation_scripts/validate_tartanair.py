@@ -19,8 +19,10 @@ import torch.nn.functional as F
 
 transform = transforms.Compose([transforms.ToTensor()])
 
+"""
+generate image stream from input image sequence
+"""
 def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 320.0, 320.0, 240.0], stereo=False, add_new_img=False):
-    """ image generator """
 
     # read all png images in folder
     ht0, wd0 = [480, 640]
@@ -67,6 +69,12 @@ def image_stream(datapath=None, image_size=[512, 512], intrinsics_vec=[320.0, 32
     return data
 
 
+"""
+run SLAM system on TartanAir scene
+    - set all parameters for current run
+    - for each image in image-stream run track function
+    - evaluate results
+"""
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--datapath", default="datasets/TartanAir")
