@@ -7,4 +7,4 @@
 [submodule "thirdparty/DOT"]
 	path = thirdparty/DOT
 	url = git@github.com:behretj/DOT.git
-	branch = complete
+	branch = main

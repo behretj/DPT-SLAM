@@ -82,8 +82,8 @@ Download scene to add in DPT-SLAM/dataset/TartanAir from https://theairlab.org/t
 
 Create and activate a virtual environment
 ```
-python3 -m venv dpt_slam_env
-source dpt_slam_env/bin/activate
+python3 -m venv env_dpt
+source env_dpt/bin/activate
 ```
 
 
@@ -111,7 +111,7 @@ In our case :
 
 ```
 chmod +111 setup.py
-sbatch < $root_path$//DOT-SLAM/job-install.sh
+sbatch < $root_path$/DPT-SLAM/job-install.sh
 
 job-install.sh:
 #!/bin/bash
@@ -122,20 +122,20 @@ job-install.sh:
 #SBATCH --time 02:00:00        ### adapt to our needs
 #SBATCH --mem-per-cpu=12000
 ###SBATCH -J analysis1
-#SBATCH -o job_output/dot-slam%j.out
-#SBATCH -e job_output/dot-slam%j.err
+#SBATCH -o job_output/dpt-slam%j.out
+#SBATCH -e job_output/dpt-slam%j.err
 ###SBATCH --mail-type=END,FAIL
 
 . /etc/profile.d/modules.sh
 module load cuda/12.1
-export CUB_HOME=$root_path$/DOT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
+export CUB_HOME=$root_path$/DPT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
 echo $CUB_HOME
 export CXXFLAGS="-std=c++17"
 
 echo "working"
-export PYTHONPATH="$root_path$/DOT-SLAM/droid_slam/thirdparty/DOT"
-source $root_path$/DOT-SLAM/env_dot-slam/bin/activate
-cd $root_path$/DOT-SLAM
+export PYTHONPATH="$root_path$/DPT-SLAM/droid_slam/thirdparty/DOT"
+source $root_path$/DPT-SLAM/env_dpt/bin/activate
+cd $root_path$/DPT-SLAM
 python ./setup.py install
 echo "finished"
 
@@ -184,7 +184,7 @@ cd $root_dir$/DPT-SLAM
 
 pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-pip install tensorboard opencv-python scipy tqdm suitesparse-graphblas matplotlib PyYAML gdown ninja
+pip install matplotlib==3.8.4 numpy==1.26.3 tensorboard opencv-python scipy tqdm suitesparse-graphblas PyYAML gdown
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 pip install evo --upgrade --no-binary evo
 
@@ -224,8 +224,8 @@ Job example (replace 'root_path' )
 #SBATCH --time 02:00:00        ### adapt to our needs
 #SBATCH --mem-per-cpu=12000
 ###SBATCH -J analysis1
-#SBATCH -o job_output/dot-slam%j.out
-#SBATCH -e job_output/dot-slam%j.err
+#SBATCH -o job_output/dpt-slam%j.out
+#SBATCH -e job_output/dpt-slam%j.err
 ###SBATCH --mail-type=END,FAIL
 
 . /etc/profile.d/modules.sh
@@ -237,7 +237,7 @@ export CXXFLAGS="-std=c++17"
 echo "working"
 export PYTHONPATH="$root_path$/DPT-SLAM/droid_slam/thirdparty/DOT"
 echo $PYTHONPATH
-source $root_path$/DPT-SLAM/env_dot-slam/bin/activate
+source $root_path$/DPT-SLAM/env_dpt/bin/activate
 cd $root_path$/DPT-SLAM
 ./tools/validate_tartanair.sh --plot_curve
 echo "finished"
