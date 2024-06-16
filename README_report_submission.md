@@ -61,8 +61,8 @@ DOT-SLAM
 
 [Optional] Create a conda environment.
 ```
-conda create -n dot python=3.9
-conda activate dot
+conda create -n dpt_slam_venv python=3.9
+conda activate dpt_slam_venv
 ```
 
 Install the [PyTorch and TorchVision](https://pytorch.org/get-started/locally/) versions which are compatible with your CUDA configuration.
