@@ -38,7 +38,6 @@ class Droid:
     def track(self, tstamp, image, depth=None, intrinsics=None, image_dot=None):
 
         with torch.no_grad():
-            # check there is enough motion
             self.filterx.track_buffer(tstamp, image, depth, intrinsics, image_dot, self.frontend)
 
 

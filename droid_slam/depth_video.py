@@ -21,10 +21,10 @@ class DepthVideo:
         self.ht = ht = image_size[0]
         self.wd = wd = image_size[1]
 
-        ### for distance measure using flow ###
+        # for distance measure using flow
         self.thresh = 2.5
 
-        ### state attributes ###
+        # state attributes
         self.tstamp = torch.zeros(buffer, device="cuda", dtype=torch.float).share_memory_()
         self.images = torch.zeros(buffer, 3, ht, wd, device="cuda", dtype=torch.uint8)
         self.dirty = torch.zeros(buffer, device="cuda", dtype=torch.bool).share_memory_()
@@ -80,8 +80,10 @@ class DepthVideo:
         with self.get_lock():
             self.__item_setter(index, item)
 
+    """
+    index the depth video
+    """
     def __getitem__(self, index):
-        """ index the depth video """
 
         with self.get_lock():
             # support negative indexing
@@ -115,7 +117,7 @@ class DepthVideo:
         num_tracks_used = []
 
         for idx in range(len(sources_list)):
-            ### Doing approximate flow estimation ###
+            # Doing approximate flow estimation
             src_points = self.cotracker_track[:, sources_list[idx]].to('cuda')
             tgt_points = self.cotracker_track[:, targets_list[idx]].to('cuda')
             grid = get_grid(128, 128).to("cuda")

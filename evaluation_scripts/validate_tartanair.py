@@ -138,7 +138,6 @@ if __name__ == '__main__':
         gt_file = os.path.join(scenedir, "pose_left.txt")
         traj_ref = np.loadtxt(gt_file, delimiter=' ')[:, [1, 2, 0, 4, 5, 3, 6]] # ned -> xyz
 
-        # usually stereo should not be scale corrected, but we are comparing monocular and stereo here
         results = evaluator.evaluate_one_trajectory(
             traj_ref, traj_est, scale=True, title=scenedir[-20:].replace('/', '_'))
         

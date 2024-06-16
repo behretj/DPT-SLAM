@@ -99,14 +99,14 @@ class MotionFilter:
         inputs = image[None, :, [2,1,0]].to(self.device) / 255.0
         inputs = inputs.sub_(self.MEAN).div_(self.STDV)
 
-        ### always add first frame to the depth video ###
+        # always add first frame to the depth video
         if self.video.counter.value == 0:
             self.video.append(tstamp, image[0], Id, 1.0, depth, intrinsics / 4.0, image_dot)
             self.last_tstamp = tstamp
 
-        ### only add new frame if there is enough motion ###
+        # only add new frame if there is enough motion
         else:
-            ### Doing approximate flow estimation
+            # doing approximate flow estimation
             src_points = self.video.cotracker_track[:, self.last_tstamp].to('cuda')
             tgt_points = self.video.cotracker_track[:, tstamp].to('cuda')
             grid = get_grid(128, 128).to("cuda")
@@ -124,6 +124,10 @@ class MotionFilter:
 
         torch.cuda.empty_cache()
 
+
+    """
+    helper method to visualize tracks along image sequence
+    """
     def plot_traj_video(self):
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter('./traj_video.avi', fourcc, 10.0, (512, 512))
