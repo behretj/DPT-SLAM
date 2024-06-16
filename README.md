@@ -63,7 +63,7 @@ dataset -> DPT-SLAM
 Checkpoints -> DPT-SLAM/droid_slam/thirdparty/DOT
 ```
 
-[Optionaly] Without polybox access
+[Optionally] Without polybox access
 ```
 git clone --recursive git@github.com:behretj/DPT-SLAM.git
 cd DPT-SLAM/thirdparty/DOT/
@@ -164,7 +164,7 @@ In a directory job_output at the location from where sbatch was called or direct
 ## Evaluation
 
 ### Changing the scene 
-Set the linne 114 of validate_tatanair.py accordingly 
+Set the line 114 of validate_tatanair.py accordingly 
 ```
 test_split = ["P001 || P002 || P003"]
 ```
