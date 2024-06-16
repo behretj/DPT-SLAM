@@ -123,3 +123,21 @@ class MotionFilter:
                 self.count += 1
 
         torch.cuda.empty_cache()
+
+    def plot_traj_video(self):
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter('./traj_video.avi', fourcc, 10.0, (512, 512))
+        colors = (self.get_rainbow_colors(64).numpy() * 255).astype('uint8')
+        for idx in tqdm(range(len(self.video.cotracker_track[0])), 'visualizing track...'):
+            image = cv2.UMat((self.video.image_dot[idx].squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8'))
+            points = self.video.cotracker_track[0, idx, :, :2]
+            for p_i in range(len(points)):
+                color = colors[p_i % 64]
+                coord = points[p_i].cpu().numpy() * 512
+                if coord[0] == 0 and coord[1] == 0:
+                    continue
+                if coord[0] < 1 or coord[0] > 511 or coord[1] < 1 or coord[1] > 511:
+                    continue
+                cv2.circle(image, (int(coord[0]), int(coord[1])), 4, (int(color[0]), int(color[1]), int(color[2])), -1)
+            out.write(image)
+        out.release()
