@@ -199,6 +199,8 @@ cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 echo "finished"
 ```
 
+For a full list of all package versions of a working environment, check ```requirements.txt```. We strongly recommend following the step-by-step guide of setting up the environment instead of using the file.
+
 ## Run
 
 Run the demo on any of the samples (all demos can be run on a GPU with 11G of memory).
