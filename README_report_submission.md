@@ -13,24 +13,40 @@ Tjark Behrens, Damiano Da Col, Théo Ducrey and Wenqing Wang
 
 **Initial Code Release:** This directory currently provides our implementation of DPT-SLAM as described in our report. This work was done in the context of the course 3D Vision at ETH Zürich
 File structure of principal parts and contributions
+                                  
 
-DOT-SLAM\
-├── datasets\
-│   ├── TartanAir                               # Data :            Contain the different scenes we used for testing\
-│   │   ├── P000\
-│   │   ├── ...\
-│   │   └── P006\
-│   ├── TartanAir_small                         # Data :            Contain the different scenes we used for fast testing of new functions\
-├── evaluation_scripts/validate_tartanair.py    # Evaluation :      line 106 may be edited to switch testing between the different scene\
-├── droid_slam\
-
-├── thirdparty\
-│   ├── DOT\
-│   │   ├── Checkpoints\
-│   │   ├── dot\
-│   │   │   ├── models\
-│   │   │   │   ├── point_tracking.py           # Implementation :  implementing most of the changes of the section 3.2.1 of the report\
-├── tools/validate_tartanair.sh                 # Evaluation :      can be modified to switch testing between small scene and actual scene of Tatanair\
+```
+DOT-SLAM
+├── datasets
+│   ├── TartanAir                            -> Data : Contain the different scenes we used for testing
+│   │   ├── P000
+│   │   ├── ...
+│   │   └── P006
+│   ├── TartanAir_small                      -> Data : Contain the different scenes we used for fast testing of new functions
+├── evaluation_scripts/validate_tartanair.py -> Evaluation : line 106 may be edited to switch testing between the different scenes
+├── droid_slam                               -> Implementation : Droid : rewritten to support 4x downsampling of DPT-SLAM instead of 8x of DROID,
+│   │                                           Implementation : reshape the image once in initialization instead of reshaping it every time when
+│   │                                                            computing point tracks and refined flows.
+│   ├── thirdparty
+│   │   ├── DOT
+│   │   │   ├── Checkpoints
+│   │   │   ├── dot
+│   │   │   │   ├── models
+│   │   │   │   │   ├── point_tracking.py    -> Implementation : Point sampling using Harris corner detection and grid,
+│   │   │   │   │   │                           Implementation : logic for frequent resampling to keep a minimum nbr of visible points
+│   │   │   │   │   │                           Implementation : handling multiple instances of cotracker and track merging
+│   │   │   │   │   ├── optical_flow.py      -> Implementation : Add a new mode "flow_between_frames", which takes the track from online CoTracker and outputs the refined flow.
+│   │   │   │   │                               Implementation : Save the flow in a dictionary to reduce computation redundancy. 
+│   │   │   │   │                               Implementation : Add EPE saving and visualizing function to help analysis of the code.
+│   ├── depth_video.py                       -> Implementation : Changed distance measure, now selecting pairs of frames to add to graph based on flow magnitude.
+│   ├── droid_frontend.py                    -> Implementation : Rewrote to now use DPT_SLAM update step instead of DROID_SLAM update step.
+│   ├── droid.py                             -> Implementation : Implemented a track buffer to feed frames by group of window's size to CoTracker, deleted the backend of DROID.
+│   ├── factory_graph.py                     -> Implementation : Entirely rewrote to support new update step of DPT-SLAM
+│   │                                           Implementation : Integrated the refined flow into the DROID SLAM system.
+│   ├── motion_filter.py                     -> Implementation : In function plot_traj_video, implemented visualization of tracks for a given video.
+├── tools/validate_tartanair.sh              -> Implementation : Added logic to make all videos of length divisible by 4, adding last image before processing and deleting again added images before getting evaluation result.
+│   │                                           Evaluation : Has variable to be modified to switch testing between small scene and actual scene of TartanAir.
+```
 
 
 
@@ -76,8 +92,8 @@ Execute the termminal command of the job bellow
 
 Sbatch
 ```
-Create file job.sh with the content of the next section or replace the content of the existing example in the root directory of the repo
-sbatch < job.sh
+Create file job.sh with the content of the next section
+& sbatch < job.sh
 ```
 
 
