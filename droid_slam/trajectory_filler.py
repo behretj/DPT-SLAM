@@ -5,19 +5,15 @@ import lietorch
 from lietorch import SE3
 from collections import OrderedDict
 from factor_graph import FactorGraph
-from droid_net import DroidNet
 import geom.projective_ops as pops
 
 
+"""
+Class used to fill in non-keyframe poses
+"""
 class PoseTrajectoryFiller:
-    """ This class is used to fill in non-keyframe poses """
 
-    def __init__(self, net, video, device="cuda:0"):
-        
-        # split net modules
-        self.cnet = net.cnet
-        self.fnet = net.fnet
-        self.update = net.update
+    def __init__(self, video, device="cuda:0"):
 
         self.count = 0
         self.video = video
@@ -26,14 +22,12 @@ class PoseTrajectoryFiller:
         # mean, std for image normalization
         self.MEAN = torch.as_tensor([0.485, 0.456, 0.406], device=self.device)[:, None, None]
         self.STDV = torch.as_tensor([0.229, 0.224, 0.225], device=self.device)[:, None, None]
-        
-    @torch.cuda.amp.autocast(enabled=True)
-    def __feature_encoder(self, image):
-        """ features for correlation volume """
-        return self.fnet(image)
 
+
+    """
+    fill operator
+    """
     def __fill(self, tstamps, images, intrinsics):
-        """ fill operator """
 
         tt = torch.as_tensor(tstamps, device="cuda")
         images = torch.stack(images, 0)
@@ -57,28 +51,28 @@ class PoseTrajectoryFiller:
         w = v * (tt - ts[t0]).unsqueeze(-1)
         Gs = SE3.exp(w) * Ps[t0]
 
-        # extract features (no need for context features)
         inputs = inputs.sub_(self.MEAN).div_(self.STDV)
-        fmap = self.__feature_encoder(inputs)
 
         self.video.counter.value += M
-        self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 8.0, fmap)
+        self.video[N:N+M] = (tt, images[:,0], Gs.data, 1, None, intrinsics / 4.0)
 
-        graph = FactorGraph(self.video, self.update)
+        graph = FactorGraph(self.video)
         graph.add_factors(t0.cuda(), torch.arange(N, N+M).cuda())
         graph.add_factors(t1.cuda(), torch.arange(N, N+M).cuda())
 
         for itr in range(6):
-            graph.update(N, N+M, motion_only=True)
+            graph.update_DOT_SLAM(N, N+M, motion_only=True)
     
         Gs = SE3(self.video.poses[N:N+M].clone())
         self.video.counter.value -= M
 
         return [ Gs ]
 
+    """
+    fill in poses of non-keyframe images
+    """
     @torch.no_grad()
     def __call__(self, image_stream):
-        """ fill in poses of non-keyframe images """
 
         # store all camera poses
         pose_list = []
