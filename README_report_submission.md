@@ -65,7 +65,7 @@ Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
 
 [Optionaly] Without polybox access
 ```
-git clone --branch DamiSubmission --recursive git@github.com:behretj/DOT-SLAM.git
+git clone --recursive git@github.com:behretj/DOT-SLAM.git
 cd DOT-SLAM/thirdparty/DOT/
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/cvo_raft_patch_8.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_raft_patch_4_alpha.pth
