@@ -58,6 +58,13 @@ DOT-SLAM
 
 ## Getting Started
 1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox :
+```
+Dataset -> DOT-SLAM
+Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
+
+``
+
+
 
 2. Install dependencies
 
@@ -137,6 +144,11 @@ cd $root_path$/DOT-SLAM
 ./tools/validate_tartanair.sh --plot_curve
 echo "finished"
 ```
+
+Output
+```
+In a directory job_output at the location from where sbatch was called or directly in the console
+``` 
 
 ## Evaluation
 
