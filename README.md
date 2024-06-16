@@ -57,7 +57,7 @@ DPT-SLAM
 * **Inference:** Reproducing our run without training will require a GPU with at least 11G of memory. 
 
 ## Getting Started
-1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox: TODO
+1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox: [https://polybox.ethz.ch/index.php/s/THgcqijIfKN5bHo]
 ```
 dataset -> DPT-SLAM
 Checkpoints -> DPT-SLAM/droid_slam/thirdparty/DOT
