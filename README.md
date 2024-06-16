@@ -18,49 +18,49 @@ File structure of principal parts and contributions:
 ```
 DPT-SLAM
 ├── datasets
-│   ├── TartanAir                            -> Data : Contain the different scenes we used for testing
+│   ├── TartanAir                            -> Data : Contains the different scenes we used for testing
 │   │   ├── P001
 │   │   ├── P002
 │   │   └── P003
-│   ├── TartanAir_small                      -> Data : Contain the different scenes we used for fast testing of new functions
+│   ├── TartanAir_small                      -> Data : Contains the different scenes we used for quick testing of new functions
 ├── evaluation_scripts/validate_tartanair.py -> Evaluation : line 106 may be edited to switch testing between the different scenes
-├── droid_slam                               -> Implementation : Droid : rewritten to support 4x downsampling of DPT-SLAM instead of 8x of DROID,
+├── droid_slam                               -> Implementation : rewritten Droid to support 4x downsampling of DPT-SLAM instead of 8x of DROID-SLAM
 │   │                                           Implementation : reshape the image once in initialization instead of reshaping it every time when
-│   │                                                            computing point tracks and refined flows.
+│   │                                                            computing point tracks and refined flows
 │   ├── thirdparty
 │   │   ├── DOT
 │   │   │   ├── Checkpoints
 │   │   │   ├── dot
 │   │   │   │   ├── models
-│   │   │   │   │   ├── point_tracking.py    -> Implementation : Point sampling using Harris corner detection and grid,
+│   │   │   │   │   ├── point_tracking.py    -> Implementation : Point sampling using Harris corner detection and grid
 │   │   │   │   │   │                           Implementation : logic for frequent resampling to keep a minimum nbr of visible points
 │   │   │   │   │   │                           Implementation : handling multiple instances of cotracker and track merging
-│   │   │   │   │   ├── optical_flow.py      -> Implementation : Add a new mode "flow_between_frames", which takes the track from online CoTracker and outputs the refined flow.
-│   │   │   │   │                               Implementation : Save the flow in a dictionary to reduce computation redundancy. 
-│   │   │   │   │                               Implementation : Add EPE saving and visualizing function to help analysis of the code.
+│   │   │   │   │   ├── optical_flow.py      -> Implementation : Add a new mode "flow_between_frames", which takes the track from online CoTracker and outputs the refined flow
+│   │   │   │   │                               Implementation : Save the flow in a dictionary to reduce computation redundancy
+│   │   │   │   │                               Implementation : Add EPE saving and visualizing function to help analysis of the code
 │   │   │   │   │                               Implementation : Add Gaussian weight approximation function
 │   │   │   │   │                               Implementation : Add a weight visualization function
-│   ├── depth_video.py                       -> Implementation : Changed distance measure, now selecting pairs of frames to add to graph based on flow magnitude.
-│   ├── droid_frontend.py                    -> Implementation : Rewrote to now use DPT_SLAM update step instead of DROID_SLAM update step.
-│   ├── droid.py                             -> Implementation : Implemented a track buffer to feed frames by group of window's size to CoTracker, deleted the backend of DROID.
+│   ├── depth_video.py                       -> Implementation : Changed distance measure, now selecting pairs of frames to add to graph based on flow magnitude
+│   ├── droid_frontend.py                    -> Implementation : Rewrote to now use DPT_SLAM update step instead of DROID_SLAM update step
+│   ├── droid.py                             -> Implementation : Implemented a track buffer to feed frames by group of size of window to CoTracker, deleted the backend of DROID-SLAM
 │   ├── factory_graph.py                     -> Implementation : Entirely rewrote to support new update step of DPT-SLAM
-│   │                                           Implementation : Integrated the refined flow into the DROID SLAM system.
-│   ├── motion_filter.py                     -> Implementation : In function plot_traj_video, implemented visualization of tracks for a given video.
-├── tools/validate_tartanair.sh              -> Implementation : Added logic to make all videos of length divisible by 4, adding last image before processing and deleting again added images before getting evaluation result.
-│   │                                           Evaluation : Has variable to be modified to switch testing between small scene and actual scene of TartanAir.
+│   │                                           Implementation : Integrated the refined flow into the DROID-SLAM system
+│   ├── motion_filter.py                     -> Implementation : In function plot_traj_video, implemented visualization of tracks for a given video
+├── tools/validate_tartanair.sh              -> Implementation : Added logic to make all videos of length divisible by 4, adding last image before processing and deleting again added images before getting evaluation result
+│   │                                           Evaluation : Has a variable to be modified to switch testing between test scene and actual scene of TartanAir
 ```
 
 
 
 ## Requirements
 
-* **Inference:** Reproducing our run without training will require a GPU with at least 11G of memory. 
+* **Inference:** Reproducing our run without training requires a GPU with at least 11GB of memory. 
 
 ## Getting Started
-1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox: [https://polybox.ethz.ch/index.php/s/THgcqijIfKN5bHo]
+1. Download the complete project including the checkpoint, test_data, codes of each repository directly from polybox: [https://polybox.ethz.ch/index.php/s/THgcqijIfKN5bHo]
 ```
 dataset -> DPT-SLAM
-Checkpoints -> DPT-SLAM/droid_slam/thirdparty/DOT
+checkpoints -> DPT-SLAM/droid_slam/thirdparty/DOT
 ```
 
 [Optionally] Without polybox access
@@ -73,7 +73,7 @@ wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_cot
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_tapir.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_plus_bootstapir.pth
 
-Download scene to add in DPT-SLAM/dataset/TartanAir from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11go of memory if kept in full
+Download scene to add in DPT-SLAM/dataset/TartanAir from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11GB of memory if kept in full
 (For us consider linking to main team directory :  ln -s /cluster/courses/3dv/data/team-4/DOT-SLAM/datasets datasets)
 ```
 
@@ -94,7 +94,7 @@ Install the [PyTorch and TorchVision](https://pytorch.org/get-started/locally/) 
 pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/${CUDA}
 ```
 
-Install Droid-SLAM inference dependencies
+Install DROID-SLAM inference dependencies
 ```
 pip install matplotlib==3.8.4 numpy==1.26.3 tensorboard opencv-python scipy tqdm suitesparse-graphblas PyYAML gdown
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+${CUDA}.html
@@ -102,7 +102,7 @@ pip install evo --upgrade --no-binary evo
 pip install ninja
 ```
 
-Compile the extensions (takes about 10 minutes) (need to be done on a gpu node -> for us within a job) :
+Compile the extensions (takes about 10 minutes) (needs to be done on a gpu node -> for us within a job) :
 ```
 python setup.py install
 ```
@@ -146,7 +146,7 @@ Install DOT inference dependencies.
 pip install einops einshape timm lmdb av mediapy
 ```
 
-DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
+Set up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
 ```
 cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 ```
@@ -199,11 +199,11 @@ cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 echo "finished"
 ```
 
-For a full list of all package versions of a working environment, check ```requirements.txt```. We strongly recommend following the step-by-step guide of setting up the environment instead of using the file.
+For a full list of all package versions of a working environment, check ```requirements.txt```. We strongly recommend following the step-by-step guide t setup the environment instead of using the file.
 
 ## Run
 
-Run the demo on any of the samples (all demos can be run on a GPU with 11G of memory).
+Run the demo on any of the samples (all demos can be run on a GPU with 11GB of memory).
 
 Sbatch
 ```
@@ -213,7 +213,7 @@ Create file job.sh with the content of the next section
 
 or using Python
 ```
-Execute the termminal command of the job bellow
+Execute the terminal command of the job below
 ```
 
 Job example (replace 'root_path' )
@@ -253,7 +253,7 @@ In a directory job_output at the location from where sbatch was called or direct
 ## Evaluation
 
 ### Changing the scene 
-Set the line 114 of validate_tatanair.py accordingly 
+Set the line 114 of validate_tartanair.py accordingly 
 ```
 test_split = ["P001 || P002 || P003"]
 ```
@@ -263,7 +263,7 @@ Set the line 55 of point_tracking.py accordingly
 self.init_sampl_func = sampling_inititization_functions['harris || grid']
 ```
 
-### Changing nbr of point tracked/resampled 
+### Changing nbr of points tracked/resampled 
 Set the default parameters of line 347 of point_tracking.py accordingly
 ```
 get_tracks_online_droid(self, data, num_tracks=512, sim_tracks=512,**kwargs):
