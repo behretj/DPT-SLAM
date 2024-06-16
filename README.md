@@ -102,6 +102,7 @@ Compile the extensions (takes about 10 minutes) (need to be done on a gpu node -
 ```
 python3 setup.py install
 
+
 In our case : 
 chmod +111 setup.py
 sbatch < $root_path$//DOT-SLAM/job-install.sh
@@ -141,7 +142,7 @@ pip install einops einshape timm lmdb av mediapy
 
 DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
 ```
-cd DPT-SLAM/thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
+cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 ```
 
 ## Run
