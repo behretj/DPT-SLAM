@@ -1,4 +1,4 @@
-# DROID-SLAM
+# DPT-SLAM
 
 
 <center><img src="misc/pipeline.png" width="1216" style="center"></center>
@@ -22,7 +22,7 @@ To run the code you will need ...
 ## Getting Started
 1. Clone the repo using the `--recursive` flag
 ```Bash
-git clone --recursive git@github.com:behretj/DOT-SLAM.git
+git clone --recursive git@github.com:behretj/DPT-SLAM.git
 ```
 
 2. Install dependencies
