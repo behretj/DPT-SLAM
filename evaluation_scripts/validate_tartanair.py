@@ -82,7 +82,6 @@ if __name__ == '__main__':
     parser.add_argument("--image_size", default=[512,512])
     parser.add_argument("--stereo", action="store_true")
     parser.add_argument("--disable_vis", action="store_true")
-    parser.add_argument("--plot_curve", action="store_true")
     parser.add_argument("--id", type=int, default=-1)
 
     parser.add_argument("--beta", type=float, default=0.3)
@@ -148,14 +147,3 @@ if __name__ == '__main__':
 
     print("Results")
     print(ate_list)
-
-    if args.plot_curve:
-        import matplotlib.pyplot as plt
-        ate = np.array(ate_list)
-        xs = np.linspace(0.0, 1.0, 512)
-        ys = [np.count_nonzero(ate < t) / ate.shape[0] for t in xs]
-
-        plt.plot(xs, ys)
-        plt.xlabel("ATE [m]")
-        plt.ylabel("% runs")
-        plt.show()
