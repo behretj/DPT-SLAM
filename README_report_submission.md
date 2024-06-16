@@ -116,15 +116,15 @@ cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 
 Run the demo on any of the samples (all demos can be run on a GPU with 11G of memory).
 
-Python
-```
-Execute the termminal command of the job bellow
-```
-
 Sbatch
 ```
 Create file job.sh with the content of the next section
 & sbatch < job.sh
+```
+
+or using Python
+```
+Execute the termminal command of the job bellow
 ```
 
 Job example (replace 'root_path' )
