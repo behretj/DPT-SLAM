@@ -65,7 +65,7 @@ Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
 
 [Optionaly] Without polybox access
 ```
-git clone --recursive git@github.com:behretj/DOT-SLAM.git
+git clone --branch DamiSubmission --recursive git@github.com:behretj/DOT-SLAM.git
 cd DOT-SLAM/thirdparty/DOT/
 mkdir checkpoints
 cd checkpoints
