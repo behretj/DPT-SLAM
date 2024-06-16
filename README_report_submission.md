@@ -80,7 +80,6 @@ DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pyto
 cd thirdparty/DOT/dot/utils/torch3d/ && python setup.py install && cd ../../..
 ```
 
-
 ## Run
 
 Run the demo on any of the samples (all demos can be run on a GPU with 11G of memory).
@@ -95,7 +94,6 @@ Sbatch
 Create file job.sh with the content of the next section
 & sbatch < job.sh
 ```
-
 
 Job example (replace 'root_path' )
 ```
@@ -127,8 +125,6 @@ echo "finished"
 ```
 
 ## Evaluation
-
-
 
 ### Changing the scene 
 Set the linne 114 of validate_tatanair.py accordingly 
