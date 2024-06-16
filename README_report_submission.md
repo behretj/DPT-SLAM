@@ -61,8 +61,7 @@ DOT-SLAM
 ```
 Dataset -> DOT-SLAM
 Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
-
-``
+```
 
 
 
