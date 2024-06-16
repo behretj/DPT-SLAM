@@ -103,7 +103,7 @@ python3 setup.py install
 
 In our case : 
 chmod +111 setup.py
-sbatch < /home/tducrey/submission_test/DOT-SLAM/job-install.sh
+sbatch < $root_path$//DOT-SLAM/job-install.sh
 
 job-install.sh:
 #!/bin/bash
