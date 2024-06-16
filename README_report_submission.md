@@ -158,7 +158,7 @@ cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 # ./tools/validate_tartanair.sh
 
 echo "finished"
-``
+```
 
 
 ## Run
