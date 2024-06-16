@@ -74,6 +74,8 @@ wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_raf
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_cotracker2_patch_4_wind_8.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_tapir.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_plus_bootstapir.pth
+
+Download scene to add in DOT-SLAM/Dataset from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11go of memory if kept in full
 ```
 
 
