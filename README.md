@@ -86,6 +86,9 @@ python3 -m venv dpt_slam_env
 source dpt_slam_env/bin/activate
 ```
 
+
+##### Using Command line : 
+
 Install the [PyTorch and TorchVision](https://pytorch.org/get-started/locally/) versions which are compatible with your CUDA configuration. The environment setup was tested on CUDA 12.1, ${CUDA} should be replaced with the specific version (for CUDA 12.1, it's ${CUDA} = cu121).
 ```
 pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/${CUDA}
@@ -144,6 +147,54 @@ pip install einops einshape timm lmdb av mediapy
 DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
 ```
 cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
+```
+
+
+
+##### Using a Job : 
+``` 
+#!/bin/bash
+#SBATCH --account=3dv
+#SBATCH --nodes=1                  # 24 cores
+#SBATCH --gpus=1
+###SBATCH --gres=gpumem:24g
+#SBATCH --time 00:30:00        ### adapt to our needs
+#SBATCH --mem-per-cpu=12000
+###SBATCH -J analysis1
+#SBATCH -o installation%j.out
+#SBATCH -e installation%j.err
+###SBATCH --mail-type=END,FAIL
+
+. /etc/profile.d/modules.sh
+module load cuda/12.1
+export CUB_HOME=$root_dir$//DPT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
+echo $CUB_HOME
+export CXXFLAGS="-std=c++17"
+
+
+echo "working"
+
+source $root_dir$/DPT-SLAM/dpt_slam_env/bin/activate
+
+cd $root_dir$/DPT-SLAM
+
+#### put python commands here
+
+pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+pip install tensorboard opencv-python scipy tqdm suitesparse-graphblas matplotlib PyYAML gdown ninja
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+pip install evo --upgrade --no-binary evo
+
+python setup.py install
+
+pip install einops einshape timm lmdb av mediapy
+
+cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
+
+# ./tools/validate_tartanair.sh
+
+echo "finished"
 ```
 
 ## Run
