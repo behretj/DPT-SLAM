@@ -95,6 +95,7 @@ Install Droid-SLAM inference dependencies
 pip install tensorboard opencv-python scipy tqdm suitesparse-graphblas matplotlib PyYAML gdown
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+${CUDA}.html
 pip install evo --upgrade --no-binary evo
+pip install ninja
 ```
 
 Compile the extensions (takes about 10 minutes) (need to be done on a gpu node -> for us within a job) :
