@@ -11,9 +11,9 @@ Tjark Behrens, Damiano Da Col, Théo Ducrey and Wenqing Wang
 
 
 
-**Initial Code Release:** This directory currently provides our implementation of DPT-SLAM as described in our report. This work was done in the context of the course 3D Vision at ETH Zürich
-File structure of principal parts and contributions
-                                  
+**Initial Code Release:** This directory currently provides our implementation of DPT-SLAM as described in our report. This work was done in the context of the course 3D Vision at ETH Zürich.
+
+File structure of principal parts and contributions:                                  
 
 ```
 DOT-SLAM
@@ -57,7 +57,7 @@ DOT-SLAM
 * **Inference:** Reproducing our run without training will require a GPU with at least 11G of memory. 
 
 ## Getting Started
-1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox :
+1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox: TODO
 ```
 Dataset -> DOT-SLAM
 Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
