@@ -62,14 +62,8 @@ class TartanAirEvaluator:
         plot_traj(np.matrix(gt_ate_aligned), np.matrix(est_ate_aligned), vis=False, savefigname="figures/%s.pdf"%title, title=title)
 
         est_ate_aligned = np.array(est_ate_aligned)
-        gt_SEs, est_SEs = quats2SEs(gt_ate_aligned, est_ate_aligned)
 
-
-
-        rpe_score = self.rpe_eval.evaluate(gt_SEs, est_SEs)
-        kitti_score = self.kitti_eval.evaluate(gt_SEs, est_SEs)
-
-        return {'ate_score': ate_score, 'rpe_score': rpe_score, 'kitti_score': kitti_score}
+        return {'ate_score': ate_score}
 
 
 if __name__ == "__main__":
