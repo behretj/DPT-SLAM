@@ -81,7 +81,7 @@ Download scene to add in DOT-SLAM/dataset/TartanAir from https://theairlab.org/t
 
 Create and activate a virtual environment
 ```
-python -m venv dpt_slam_env
+python3 -m venv dpt_slam_env
 source dpt_slam_env/bin/activate
 ```
 
@@ -99,7 +99,7 @@ pip install evo --upgrade --no-binary evo
 
 Compile the extensions (takes about 10 minutes):
 ```
-python setup.py install
+python3 setup.py install
 ```
 
 Install DOT inference dependencies.
