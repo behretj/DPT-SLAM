@@ -199,7 +199,7 @@ cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 echo "finished"
 ```
 
-For a full list of all package versions of a working environment, check ```requirements.txt```. We strongly recommend following the step-by-step guide t setup the environment instead of using the file.
+For a full list of all package versions of a working environment, check ```requirements.txt```. We strongly recommend following the step-by-step guide to setup the environment instead of using the file.
 
 ## Run
 
