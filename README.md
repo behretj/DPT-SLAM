@@ -100,6 +100,37 @@ pip install evo --upgrade --no-binary evo
 Compile the extensions (takes about 10 minutes) (need to be done on a gpu node -> for us within a job) :
 ```
 python3 setup.py install
+
+In our case : 
+chmod +111 setup.py
+sbatch < /home/tducrey/submission_test/DOT-SLAM/job-install.sh
+
+job-install.sh:
+#!/bin/bash
+#SBATCH --account=3dv
+#SBATCH --nodes 1                  # 24 cores
+#SBATCH --gpus 1
+###SBATCH --gres=gpumem:24g
+#SBATCH --time 02:00:00        ### adapt to our needs
+#SBATCH --mem-per-cpu=12000
+###SBATCH -J analysis1
+#SBATCH -o job_output/dot-slam%j.out
+#SBATCH -e job_output/dot-slam%j.err
+###SBATCH --mail-type=END,FAIL
+
+. /etc/profile.d/modules.sh
+module load cuda/12.1
+export CUB_HOME=$root_path$/DOT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
+echo $CUB_HOME
+export CXXFLAGS="-std=c++17"
+
+echo "working"
+export PYTHONPATH="$root_path$/DOT-SLAM/droid_slam/thirdparty/DOT"
+source $root_path$/DOT-SLAM/env_dot-slam/bin/activate
+cd $root_path$/DOT-SLAM
+python ./setup.py install
+echo "finished"
+
 ```
 
 Install DOT inference dependencies.
