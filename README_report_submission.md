@@ -19,9 +19,9 @@ File structure of principal parts and contributions
 DOT-SLAM
 ├── datasets
 │   ├── TartanAir                            -> Data : Contain the different scenes we used for testing
-│   │   ├── P000
-│   │   ├── ...
-│   │   └── P006
+│   │   ├── P001
+│   │   ├── P002
+│   │   └── P003
 │   ├── TartanAir_small                      -> Data : Contain the different scenes we used for fast testing of new functions
 ├── evaluation_scripts/validate_tartanair.py -> Evaluation : line 106 may be edited to switch testing between the different scenes
 ├── droid_slam                               -> Implementation : Droid : rewritten to support 4x downsampling of DPT-SLAM instead of 8x of DROID,
@@ -81,7 +81,7 @@ cd thirdparty/DOT/dot/utils/torch3d/ && python setup.py install && cd ../../..
 ```
 
 
-## Demos
+## Run
 
 Run the demo on any of the samples (all demos can be run on a GPU with 11G of memory).
 
@@ -127,6 +127,35 @@ echo "finished"
 ```
 
 ## Evaluation
+
+
+
+### Changing the scene 
+Set the linne 114 of validate_tatanair.py accordingly 
+```
+test_split = ["P001 || P002 || P003"]
+```
+### Switching between harris and grid point sampling 
+Set the line 55 of point_tracking.py accordingly
+```
+self.init_sampl_func = sampling_inititization_functions['harris || grid']
+```
+
+### Changing nbr of point tracked/resampled 
+Set the default parameters of line 347 of point_tracking.py accordingly
+```
+get_tracks_online_droid(self, data, num_tracks=512, sim_tracks=512,**kwargs):
+```
+
+### Changing resampling frequency 
+Set the minimum point threshold as wanted:  higher = more frequent, lower = less frequent
+```
+threshold_minimum_nbr_visible_tracks_wanted = (7*S)//8
+```
+  
+
+
+
 
 
 
