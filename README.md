@@ -1,4 +1,4 @@
-# DROID-SLAM
+# DPT-SLAM
 
 
 <img src="misc/pipeline.png" width="1216" style="center">
@@ -16,7 +16,7 @@ Tjark Behrens, Damiano Da Col, Théo Ducrey and Wenqing Wang
 File structure of principal parts and contributions:                                  
 
 ```
-DOT-SLAM
+DPT-SLAM
 ├── datasets
 │   ├── TartanAir                            -> Data : Contain the different scenes we used for testing
 │   │   ├── P001
@@ -59,21 +59,21 @@ DOT-SLAM
 ## Getting Started
 1. Download the complete project including the checkpoint, test_data, codes of each repositery directly from polybox: TODO
 ```
-dataset -> DOT-SLAM
-Checkpoints -> DOT-SLAM/droid_slam/thirdparty/DOT
+dataset -> DPT-SLAM
+Checkpoints -> DPT-SLAM/droid_slam/thirdparty/DOT
 ```
 
 [Optionaly] Without polybox access
 ```
-git clone --recursive git@github.com:behretj/DOT-SLAM.git
-cd DOT-SLAM/thirdparty/DOT/
+git clone --recursive git@github.com:behretj/DPT-SLAM.git
+cd DPT-SLAM/thirdparty/DOT/
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/cvo_raft_patch_8.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_raft_patch_4_alpha.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/movi_f_cotracker2_patch_4_wind_8.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_tapir.pth
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_plus_bootstapir.pth
 
-Download scene to add in DOT-SLAM/dataset/TartanAir from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11go of memory if kept in full
+Download scene to add in DPT-SLAM/dataset/TartanAir from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11go of memory if kept in full
 ```
 
 
@@ -109,7 +109,7 @@ pip install einops einshape timm lmdb av mediapy
 
 DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
 ```
-cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
+cd DPT-SLAM/thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 ```
 
 ## Run
@@ -143,15 +143,15 @@ Job example (replace 'root_path' )
 
 . /etc/profile.d/modules.sh
 module load cuda/12.1
-export CUB_HOME=$root_path$/DOT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
+export CUB_HOME=$root_path$/DPT-SLAM/thirdparty/DOT/dot/utils/torch3d/cub-2.1.0
 echo $CUB_HOME
 export CXXFLAGS="-std=c++17"
 
 echo "working"
-export PYTHONPATH="$root_path$/DOT-SLAM/droid_slam/thirdparty/DOT"
+export PYTHONPATH="$root_path$/DPT-SLAM/droid_slam/thirdparty/DOT"
 echo $PYTHONPATH
-source $root_path$/DOT-SLAM/env_dot-slam/bin/activate
-cd $root_path$/DOT-SLAM
+source $root_path$/DPT-SLAM/env_dot-slam/bin/activate
+cd $root_path$/DPT-SLAM
 ./tools/validate_tartanair.sh --plot_curve
 echo "finished"
 ```
