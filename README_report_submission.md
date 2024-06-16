@@ -38,6 +38,8 @@ DOT-SLAM
 │   │   │   │   │   ├── optical_flow.py      -> Implementation : Add a new mode "flow_between_frames", which takes the track from online CoTracker and outputs the refined flow.
 │   │   │   │   │                               Implementation : Save the flow in a dictionary to reduce computation redundancy. 
 │   │   │   │   │                               Implementation : Add EPE saving and visualizing function to help analysis of the code.
+│   │   │   │   │                               Implementation : Add Gaussian weight approximation function
+│   │   │   │   │                               Implementation : Add a weight visualization function
 │   ├── depth_video.py                       -> Implementation : Changed distance measure, now selecting pairs of frames to add to graph based on flow magnitude.
 │   ├── droid_frontend.py                    -> Implementation : Rewrote to now use DPT_SLAM update step instead of DROID_SLAM update step.
 │   ├── droid.py                             -> Implementation : Implemented a track buffer to feed frames by group of window's size to CoTracker, deleted the backend of DROID.
