@@ -74,6 +74,7 @@ wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_mo
 wget -P checkpoints https://huggingface.co/16lemoing/dot/resolve/main/panning_movi_e_plus_bootstapir.pth
 
 Download scene to add in DPT-SLAM/dataset/TartanAir from https://theairlab.org/tartanair-dataset/ but keep in mind most of them require more than 11go of memory if kept in full
+(For us consider linking to main team directory :  ln -s /cluster/courses/3dv/data/team-4/DOT-SLAM/datasets datasets)
 ```
 
 
