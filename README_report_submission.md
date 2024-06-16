@@ -59,25 +59,37 @@ DOT-SLAM
 
 2. Install dependencies
 
-[Optional] Create a conda environment.
+Create and activate a virtual environment
 ```
-conda create -n dpt_slam_venv python=3.9
-conda activate dpt_slam_venv
+python -m venv dpt_slam_env
+source dpt_slam_env/bin/activate
 ```
 
-Install the [PyTorch and TorchVision](https://pytorch.org/get-started/locally/) versions which are compatible with your CUDA configuration.
+Install the [PyTorch and TorchVision](https://pytorch.org/get-started/locally/) versions which are compatible with your CUDA configuration. The environment setup was tested on CUDA 12.1, ${CUDA} should be replaced with the specific version (for CUDA 12.1, it's ${CUDA} = cu121).
 ```
-pip install torch==2.3.0 torchvision==0.18.0
+pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/${CUDA}
+```
+
+Install Droid-SLAM inference dependencies
+```
+pip install tensorboard opencv-python scipy tqdm suitesparse-graphblas matplotlib PyYAML gdown
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+${CUDA}.html
+pip install evo --upgrade --no-binary evo
+```
+
+Compile the extensions (takes about 10 minutes):
+```
+python setup.py install
 ```
 
 Install DOT inference dependencies.
 ```
-pip install tqdm matplotlib einops einshape scipy timm lmdb av mediapy
+pip install einops einshape timm lmdb av mediapy
 ```
 
 DSet up custom modules from [PyTorch3D](https://github.com/facebookresearch/pytorch3d) to increase speed and reduce memory consumption of interpolation operations.
 ```
-cd thirdparty/DOT/dot/utils/torch3d/ && python setup.py install && cd ../../..
+cd thirdparty/DOT/dot/utils/torch3d/ && pip install . && cd ../../..
 ```
 
 ## Run
