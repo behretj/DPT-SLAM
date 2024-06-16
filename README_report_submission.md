@@ -152,7 +152,7 @@ export PYTHONPATH="$root_path$/DOT-SLAM/droid_slam/thirdparty/DOT"
 echo $PYTHONPATH
 source $root_path$/DOT-SLAM/env_dot-slam/bin/activate
 cd $root_path$/DOT-SLAM
-./tools/validate_tartanair.sh --plot_curve
+./tools/validate_tartanair.sh
 echo "finished"
 ```
 
